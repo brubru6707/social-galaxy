@@ -17,7 +17,7 @@ type Node = {
   vec: THREE.Vector3; 
 };
 
-const NODE_COUNT = 30; // Increased for more stars 
+const NODE_COUNT = 10; // Increased for more stars 
 const TEMP_OBJECT = new THREE.Object3D(); // A dummy object to help with math
 
 // Generate data once
@@ -68,7 +68,7 @@ function GalaxyField({
       // 1. Position & Scale
       TEMP_OBJECT.position.copy(node.vec);
       // Scale up if selected
-      const scale = isSelected ? 1.0 : 0.3; // Smaller stars: 0.3 base, 1.0 selected 
+      const scale = isSelected ? 0.8 : 0.4; // Slightly larger for better clickability: 0.4 base 
       TEMP_OBJECT.scale.set(scale, scale, scale);
       
       TEMP_OBJECT.updateMatrix();
@@ -97,6 +97,7 @@ function GalaxyField({
         e.stopPropagation();
         // The instanceId tells us WHICH sphere was clicked
         const id = e.instanceId;
+        console.log('Clicked instance:', id);
         if (id !== undefined) {
           setHoveredId(id);
           onSelect(nodes[id]);
@@ -123,12 +124,11 @@ export default function SocialGalaxyFast() {
     <View style={styles.container}>
       <View style={[styles.canvasLayer, { width, height }]}>
         <Canvas 
-          camera={{ position: [0, 0, 15], fov: 60 }}
+          camera={{ position: [0, 0, 30], fov: 60 }}
           performance={{ min: 0.5 }}
-          frameloop="demand" // Only render when something changes
         >
           <color attach="background" args={["#101015"]} />
-          <OrbitControls makeDefault enablePan={false} enableZoom={true} enableRotate={true} rotateSpeed={2} />
+          <OrbitControls makeDefault enablePan={false} enableZoom={true} enableRotate={true} rotateSpeed={2} zoomSpeed={0.1} />
           
           <GalaxyField onSelect={setSelectedUser} />
         </Canvas>

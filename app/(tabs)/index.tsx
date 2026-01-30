@@ -17,6 +17,7 @@ import mockData from '../../assets/mock_data.json';
 import Confetti from '../../components/Confetti';
 import EventDetails from '../../components/event-details';
 import { UserType as GalaxyUserType } from '../../components/lobby';
+import { getNemesisAndBestie } from '../../components/lobby-match-utils';
 import { SocialGalaxy, calculateMatchScore } from '../../components/social-galaxy';
 
 // Dummy data
@@ -203,6 +204,30 @@ export default function HomeScreen() {
             <TouchableOpacity style={[styles.actionButton, { position: 'absolute', top: 20, right: 20, backgroundColor: '#FF5CB3', zIndex: 20 }]} onPress={() => setShowGalaxy(true)}>
               <Text style={styles.actionButtonText}>Social Galaxy</Text>
             </TouchableOpacity>
+            {/* Nemesis and Bestie Section */}
+            {(() => {
+              const { nemesis, bestie } = currentUser ? getNemesisAndBestie(currentUser, galaxyUsers) : { nemesis: null, bestie: null };
+              return (
+                <View style={styles.matchRow}>
+                  {nemesis && (
+                    <View style={[styles.matchCard, { backgroundColor: '#2A002A' }]}>
+                      <Text style={[styles.matchLabel, { color: '#FF5CB3' }]}>Nemesis</Text>
+                      <Image source={{ uri: nemesis.profile_picture }} style={styles.avatar} />
+                      <Text style={styles.matchName}>{nemesis.name}</Text>
+                      <Text style={[styles.matchScore, { color: '#FF5CB3' }]}>Match: {calculateMatchScore(currentUser, nemesis)}%</Text>
+                    </View>
+                  )}
+                  {bestie && (
+                    <View style={[styles.matchCard, { backgroundColor: '#002A1A' }]}>
+                      <Text style={[styles.matchLabel, { color: '#5CFFB3' }]}>Bestie</Text>
+                      <Image source={{ uri: bestie.profile_picture }} style={styles.avatar} />
+                      <Text style={styles.matchName}>{bestie.name}</Text>
+                      <Text style={[styles.matchScore, { color: '#5CFFB3' }]}>Match: {calculateMatchScore(currentUser, bestie)}%</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
             <ScrollView contentContainerStyle={styles.lobbyScroll}>
               {galaxyUsers.length === 0 ? (
                 <Text style={styles.emptyText}>No attendees found</Text>
@@ -694,8 +719,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     flex: 1,
     marginHorizontal: 6,
     alignItems: 'center',
@@ -707,7 +732,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 1,
   },
@@ -868,5 +893,35 @@ const styles = StyleSheet.create({
   closeResultsText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  matchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    marginVertical: 16,
+    marginTop: 60, // Account for the absolute positioned button
+  },
+  matchCard: {
+    alignItems: 'center',
+    borderRadius: 16,
+    padding: 12,
+    minWidth: 120,
+    marginHorizontal: 8,
+  },
+  matchLabel: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  matchName: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  matchScore: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginTop: 2,
   },
 });

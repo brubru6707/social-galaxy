@@ -1,5 +1,6 @@
+import { useUser } from '@/contexts/UserContext';
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export type EventDetailsProps = {
   event: {
@@ -13,10 +14,14 @@ export type EventDetailsProps = {
     category?: string;
     maxAttendees?: number;
     event_picture?: string;
+    attendees?: string[];
   };
 };
 
 export default function EventDetails({ event }: EventDetailsProps) {
+  const { currentUser } = useUser();
+  const isUserAttending = currentUser && event.attendees?.includes(currentUser.id);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {event.event_picture && (
@@ -30,6 +35,29 @@ export default function EventDetails({ event }: EventDetailsProps) {
       {event.maxAttendees && <Text style={styles.info}>Max Attendees: {event.maxAttendees}</Text>}
       {event.host && <Text style={styles.info}>Host: {event.host}</Text>}
       {event.description && <Text style={styles.description}>{event.description}</Text>}
+      
+      {/* RSVP Buttons */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={[
+          styles.rsvpButton, 
+          { backgroundColor: '#4CAF50' },
+          isUserAttending && styles.selectedButton
+        ]}>
+          <Text style={styles.rsvpButtonText}>Going</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[
+          styles.rsvpButton, 
+          { backgroundColor: '#FF9800' }
+        ]}>
+          <Text style={styles.rsvpButtonText}>Maybe</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[
+          styles.rsvpButton, 
+          { backgroundColor: '#F44336' }
+        ]}>
+          <Text style={styles.rsvpButtonText}>Can't Go</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -71,5 +99,36 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginTop: 24,
+    width: '100%',
+  },
+  rsvpButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  selectedButton: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    opacity: 0.8,
+  },
+  rsvpButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });

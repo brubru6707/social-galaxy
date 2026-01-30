@@ -1,6 +1,9 @@
+import { useUser } from '@/contexts/UserContext';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getNemesisAndBestie } from './lobby-match-utils';
+import { calculateMatchScore } from './social-galaxy';
 
 // --- Types ---
 export type UserType = {
@@ -14,6 +17,9 @@ export type UserType = {
 };
 
 export function Lobby({ users, onClose }: { users: UserType[]; onClose: () => void }) {
+  const { currentUser } = useUser();
+  const { nemesis, bestie } = currentUser ? getNemesisAndBestie(currentUser, users) : { nemesis: null, bestie: null };
+
   console.log('Lobby rendering with users:', users.length);
 
   if (!users || users.length === 0) {
@@ -38,6 +44,25 @@ export function Lobby({ users, onClose }: { users: UserType[]; onClose: () => vo
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <Text style={styles.closeText}>X</Text>
         </TouchableOpacity>
+      </View>
+      {/* Nemesis and Bestie Section */}
+      <View style={styles.matchRow}>
+        {nemesis && (
+          <View style={[styles.matchCard, { backgroundColor: '#2A002A' }]}> {/* Pinkish for Nemesis */}
+            <Text style={[styles.matchLabel, { color: '#FF5CB3' }]}>Nemesis</Text>
+            <Image source={{ uri: nemesis.profile_picture }} style={styles.avatar} />
+            <Text style={styles.matchName}>{nemesis.name}</Text>
+            <Text style={[styles.matchScore, { color: '#FF5CB3' }]}>Match: {calculateMatchScore(currentUser, nemesis)}%</Text>
+          </View>
+        )}
+        {bestie && (
+          <View style={[styles.matchCard, { backgroundColor: '#002A1A' }]}> {/* Greenish for Bestie */}
+            <Text style={[styles.matchLabel, { color: '#5CFFB3' }]}>Bestie</Text>
+            <Image source={{ uri: bestie.profile_picture }} style={styles.avatar} />
+            <Text style={styles.matchName}>{bestie.name}</Text>
+            <Text style={[styles.matchScore, { color: '#5CFFB3' }]}>Match: {calculateMatchScore(currentUser, bestie)}%</Text>
+          </View>
+        )}
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {users.map((user) => (
@@ -131,5 +156,34 @@ const styles = StyleSheet.create({
   stats: {
     fontSize: 12,
     color: '#FFD700',
+  },
+  matchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  matchCard: {
+    alignItems: 'center',
+    borderRadius: 16,
+    padding: 12,
+    minWidth: 120,
+    marginHorizontal: 8,
+  },
+  matchLabel: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  matchName: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  matchScore: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginTop: 2,
   },
 });

@@ -1,5 +1,7 @@
 import { useUser } from '@/contexts/UserContext';
-import React, { useState } from 'react';
+import { OrbitControls } from '@react-three/drei/native';
+import { Canvas } from '@react-three/fiber';
+import React, { Suspense, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -10,8 +12,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
+import { UserType as GalaxyUserType } from '../../components/lobby';
+import { GalaxyField } from '../../components/social-galaxy';
 
 // Dummy data
 const recentActivities = [
@@ -44,109 +49,238 @@ type UserType = {
   hot_take_answers: any[];
 };
 
-const allEvents = mockData.events || [];
-const currentUserId = mockData.current_user;
-const currentUserData = mockData.users.find(u => u.id === currentUserId);
-const userEventIds = currentUserData?.events_gone_to?.map(e => e.id) || [];
-const recentEvents = allEvents.filter(e => userEventIds.includes(e.id));
-
 export default function HomeScreen() {
+  const allEvents = mockData.events || [];
+  const currentUserId = mockData.current_user;
+  const currentUserData = mockData.users.find(u => u.id === currentUserId);
+  const userEventIds = currentUserData?.events_gone_to?.map(e => e.id) || [];
+  const recentEvents = allEvents.filter(e => userEventIds.includes(e.id));
+
   const { currentUser } = useUser();
   const [showModal, setShowModal] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
+  const [galaxyVisible, setGalaxyVisible] = useState(false);
+  const [galaxyUsers, setGalaxyUsers] = useState<GalaxyUserType[]>([]);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const firstQuestion = currentUserData?.hot_take_answers?.[0];
   const questionText = firstQuestion?.question_text || '';
   const [option1, option2] = questionText.split(' vs ');
 
-  const attendees: UserType[] = selectedEvent ? selectedEvent.attendees.map(id => mockData.users.find(u => u.id === id)).filter((u): u is UserType => u !== undefined) : [];
-
-  // Debug statements
-  console.log('Current User ID:', currentUserId);
-  console.log('Current User Data:', currentUserData);
-  console.log('Events Gone To (Titles):', currentUserData?.events_gone_to?.map(e => e.title));
-  console.log('User Event IDs:', userEventIds);
-  console.log('Recent Events:', recentEvents);
+  function handleEventPress(event: EventType) {
+    console.log('Event clicked:', event.title);
+    console.log('Event attendees:', event.attendees);
+    
+    // Find users who are attendees of the event
+    const users = mockData.users.filter((u: GalaxyUserType) => event.attendees.includes(u.id));
+    console.log('Filtered users:', users.length, users);
+    
+    if (users.length === 0) {
+      console.warn('No attendees found for event:', event.title);
+      return;
+    }
+    
+    console.log('Setting galaxyUsers to', users.length);
+    setGalaxyUsers(users);
+    console.log('Setting showModal to false');
+    setShowModal(false); // Close hot question modal first
+    setTimeout(() => {
+      console.log('Setting galaxyVisible to true');
+      setGalaxyVisible(true);
+    }, 300); // Wait for modal close animation
+  }
 
   return (
-    <>
-    <Modal visible={showModal} transparent animationType="fade">
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
+    galaxyVisible ? (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>EVENT VIEWS</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={() => setGalaxyVisible(false)}>
             <Text style={styles.closeText}>X</Text>
           </TouchableOpacity>
-          <Text style={styles.modalQuestion}>{questionText}</Text>
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.optionButton} onPress={() => setShowModal(false)}>
-              <Text style={styles.optionText}>{option1}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionButton} onPress={() => setShowModal(false)}>
-              <Text style={styles.optionText}>{option2}</Text>
-            </TouchableOpacity>
+        </View>
+        <ScrollView ref={scrollViewRef} horizontal scrollEnabled={false} pagingEnabled={false} showsHorizontalScrollIndicator={false}>
+          <View style={{ width }}>
+            <ScrollView contentContainerStyle={styles.lobbyScroll}>
+              {galaxyUsers.length === 0 ? (
+                <Text style={styles.emptyText}>No attendees found</Text>
+              ) : (
+                galaxyUsers.map((user) => (
+                  <View key={user.id} style={styles.userCard}>
+                    <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
+                    <View style={styles.userInfo}>
+                      <Text style={styles.name}>{user.name}</Text>
+                      <Text style={styles.bio}>{user.bio}</Text>
+                      <Text style={styles.stats}>
+                        Events attended: {user.events_gone_to.length} | Hot takes: {user.hot_take_answers.length}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+            <PanGestureHandler
+              onGestureEvent={(event) => {
+                // Handle horizontal swipe at top of lobby
+              }}
+              onHandlerStateChange={(event) => {
+                if (event.nativeEvent.state === State.END) {
+                  const { translationX } = event.nativeEvent;
+                  if (Math.abs(translationX) > 50) {
+                    const targetX = translationX > 0 ? 0 : width;
+                    scrollViewRef.current?.scrollTo({ x: targetX, animated: true });
+                  }
+                }
+              }}
+            >
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20%', zIndex: 10 }} />
+            </PanGestureHandler>
+            <PanGestureHandler
+              onGestureEvent={(event) => {
+                // Handle horizontal swipe at bottom of lobby
+              }}
+              onHandlerStateChange={(event) => {
+                if (event.nativeEvent.state === State.END) {
+                  const { translationX } = event.nativeEvent;
+                  if (Math.abs(translationX) > 50) {
+                    const targetX = translationX > 0 ? 0 : width;
+                    scrollViewRef.current?.scrollTo({ x: targetX, animated: true });
+                  }
+                }
+              }}
+            >
+              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '20%', zIndex: 10 }} />
+            </PanGestureHandler>
           </View>
-        </View>
-      </View>
-    </Modal>
-    <Modal visible={!!selectedEvent} transparent animationType="fade" onRequestClose={() => setSelectedEvent(null)}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedEvent(null)}>
-            <Text style={styles.closeText}>X</Text>
-          </TouchableOpacity>
-          <Text style={styles.modalQuestion}>{selectedEvent?.title} - Social Galaxy</Text>
-          <ScrollView style={styles.attendeesScroll}>
-            {attendees.map((user) => (
-              <View key={user.id} style={styles.userCard}>
-                <Image source={{ uri: user.profile_picture }} style={styles.userImage} />
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{user.name}</Text>
-                  <Text style={styles.userBio}>{user.bio}</Text>
-                </View>
+          <View style={{ width }}>
+            <View style={styles.canvasLayer}>
+              <Suspense fallback={<Text style={{ color: 'white', textAlign: 'center', marginTop: 100 }}>Loading galaxy...</Text>}>
+                <Canvas 
+                  camera={{ position: [0, 0, 30], fov: 60 }}
+                  performance={{ min: 0.5 }}
+                  gl={{ antialias: false, powerPreference: 'high-performance' }}
+                >
+                  <color attach="background" args={["#000000"]} />
+                  <OrbitControls makeDefault enablePan={false} enableZoom={true} enableRotate={true} rotateSpeed={2} zoomSpeed={0.1} />
+                  <GalaxyField onSelect={setSelectedUser} users={galaxyUsers} />
+                </Canvas>
+              </Suspense>
+            </View>
+            <PanGestureHandler
+              onGestureEvent={(event) => {
+                // Handle horizontal swipe at top
+              }}
+              onHandlerStateChange={(event) => {
+                if (event.nativeEvent.state === State.END) {
+                  const { translationX } = event.nativeEvent;
+                  if (Math.abs(translationX) > 50) {
+                    const targetX = translationX > 0 ? 0 : width;
+                    scrollViewRef.current?.scrollTo({ x: targetX, animated: true });
+                  }
+                }
+              }}
+            >
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20%', zIndex: 10 }} />
+            </PanGestureHandler>
+            <PanGestureHandler
+              onGestureEvent={(event) => {
+                // Handle horizontal swipe at bottom
+              }}
+              onHandlerStateChange={(event) => {
+                if (event.nativeEvent.state === State.END) {
+                  const { translationX } = event.nativeEvent;
+                  if (Math.abs(translationX) > 50) {
+                    const targetX = translationX > 0 ? 0 : width;
+                    scrollViewRef.current?.scrollTo({ x: targetX, animated: true });
+                  }
+                }
+              }}
+            >
+              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '20%', zIndex: 10 }} />
+            </PanGestureHandler>
+          </View>
+        </ScrollView>
+        {/* User Profile Modal */}
+        <Modal visible={!!selectedUser} transparent animationType="fade" onRequestClose={() => setSelectedUser(null)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.userProfileModal}>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedUser(null)}>
+                <Text style={styles.closeText}>X</Text>
+              </TouchableOpacity>
+              {selectedUser && (
+                <>
+                  <Image source={{ uri: selectedUser.user.profile_picture }} style={styles.profileImage} />
+                  <Text style={styles.cardTitle}>{selectedUser.user.name}</Text>
+                  <Text style={styles.cardBio}>{selectedUser.user.bio}</Text>
+                  <Text style={styles.cardStats}>
+                    Events attended: {selectedUser.user.events_gone_to.length} | Hot takes: {selectedUser.user.hot_take_answers.length}
+                  </Text>
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    ) : (
+      <>
+        {/* Hot Question Modal */}
+        <Modal visible={showModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
+                <Text style={styles.closeText}>X</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalQuestion}>{questionText}</Text>
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.optionButton} onPress={() => setShowModal(false)}>
+                  <Text style={styles.optionText}>{option1}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.optionButton} onPress={() => setShowModal(false)}>
+                  <Text style={styles.optionText}>{option2}</Text>
+                </TouchableOpacity>
               </View>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Fun Header */}
-        <View style={styles.headerWrap}>
-          <Text style={styles.logo}>partiful</Text>
-          <Text style={styles.greeting}>Hey, {currentUser?.name || 'Party Person'}! 🎉</Text>
-          <Text style={styles.subtitle}>Your social universe, reimagined</Text>
-        </View>
-        {/* Recent Events Carousel */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Events</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventScroll}>
-            {recentEvents.map((event) => (
-              <TouchableOpacity key={event.id} style={styles.eventCard} onPress={() => setSelectedEvent(event)}>
-                <Image source={{ uri: event.event_picture }} style={styles.eventImage} />
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.eventInfo}>{event.location}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-        {/* Trending Events */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trending</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventScroll}>
-            {allEvents.slice(0, 5).map((event) => (
-              <TouchableOpacity key={event.id} style={styles.eventCard} onPress={() => setSelectedEvent(event)}>
-                <Image source={{ uri: event.event_picture }} style={styles.eventImage} />
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.eventInfo}>{event.location}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+            </View>
+          </View>
+        </Modal>
+        <SafeAreaView style={styles.container}>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Fun Header */}
+            <View style={styles.headerWrap}>
+              <Text style={styles.logo}>partiful</Text>
+              <Text style={styles.greeting}>Hey, {currentUser?.name || 'Party Person'}! 🎉</Text>
+              <Text style={styles.subtitle}>Your social universe, reimagined</Text>
+            </View>
+            {/* Recent Events Carousel */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Recent Events</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventScroll}>
+                {recentEvents.map((event) => (
+                  <TouchableOpacity key={event.id} style={styles.eventCard} onPress={() => handleEventPress(event)}>
+                    <Image source={{ uri: event.event_picture }} style={styles.eventImage} />
+                    <Text style={styles.eventTitle}>{event.title}</Text>
+                    <Text style={styles.eventInfo}>{event.location}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+            {/* Trending Events */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Trending</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventScroll}>
+                {allEvents.slice(0, 5).map((event) => (
+                  <TouchableOpacity key={event.id} style={styles.eventCard} onPress={() => handleEventPress(event)}>
+                    <Image source={{ uri: event.event_picture }} style={styles.eventImage} />
+                    <Text style={styles.eventTitle}>{event.title}</Text>
+                    <Text style={styles.eventInfo}>{event.location}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
 
-      </ScrollView>
-    </SafeAreaView>
-    </>
+          </ScrollView>
+        </SafeAreaView>
+      </>
+    )
   );
 }
 
@@ -155,6 +289,122 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  closeButton: {
+    backgroundColor: '#222',
+    borderRadius: 20,
+    padding: 10,
+  },
+  closeText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  lobbyScroll: {
+    padding: 20,
+  },
+  userCard: {
+    flexDirection: 'row',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 15,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  bio: {
+    fontSize: 14,
+    color: '#ccc',
+    marginBottom: 5,
+    lineHeight: 20,
+  },
+  stats: {
+    fontSize: 12,
+    color: '#FFD700',
+  },
+  emptyText: {
+    color: '#ccc',
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 100,
+  },
+  canvasLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 1,
+    width,
+    height: Dimensions.get('window').height - 100, // Adjust for header
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userProfileModal: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 15,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+  },
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  cardBio: {
+    fontSize: 16,
+    color: '#ccc',
+    textAlign: 'center',
+    marginBottom: 15,
+    lineHeight: 22,
+  },
+  cardStats: {
+    fontSize: 14,
+    color: '#FFD700',
+    textAlign: 'center',
   },
   scrollContent: {
     padding: 20,
@@ -364,35 +614,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  attendeesScroll: {
-    maxHeight: 300,
-    width: '100%',
-  },
-  userCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 10,
-  },
-  userImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  userBio: {
-    fontSize: 14,
-    color: '#ccc',
   },
 });

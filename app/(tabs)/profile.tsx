@@ -1,27 +1,27 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useUser } from '@/contexts/UserContext';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Dummy user data
-const dummyUser = {
-  id: 'User 5',
-  firstName: 'Alex',
-  lastName: 'Johnson',
-  profile_picture: "https://i.pravatar.cc/300?u='ALEX'",
-  dateJoined: 'January 2024',
-  mutuals: 24,
-  bio: 'Adventure seeker, coffee lover, and tech enthusiast. Always up for a good conversation or a hike in the hills. Let\'s connect!',
-  hotTakes: [
-    { question: 'Morning vs Night', answer: 'Morning' },
-    { question: 'Vim vs Emacs', answer: 'Vim' },
-    { question: 'Pancakes vs Waffles', answer: 'Waffles' },
-    { question: 'Tabs vs Spaces', answer: 'Spaces' },
-    { question: 'TikTok vs Instagram', answer: 'TikTok' },
-  ],
-};
-
 export default function ProfileScreen() {
+  const { currentUser } = useUser();
+
+  // Map currentUser data to the expected format
+  const userData = {
+    id: currentUser?.id || 'Unknown',
+    firstName: currentUser?.name || 'User',
+    lastName: '',
+    profile_picture: currentUser?.profile_picture || "https://i.pravatar.cc/300?u='USER'",
+    dateJoined: currentUser?.dob || 'Unknown',
+    mutuals: currentUser?.events_gone_to?.length || 0,
+    bio: currentUser?.bio || 'No bio available',
+    hotTakes: currentUser?.hot_take_answers?.map((take: any) => ({
+      question: take.question_text || 'Unknown question',
+      answer: take.answer || 'No answer'
+    })) || [],
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -34,13 +34,13 @@ export default function ProfileScreen() {
 
         {/* Profile Picture */}
         <View style={styles.profilePictureContainer}>
-          <Image source={{ uri: dummyUser.profile_picture }} style={styles.profilePicture} />
+          <Image source={{ uri: userData.profile_picture }} style={styles.profilePicture} />
         </View>
 
         {/* Name */}
         <View style={styles.nameContainer}>
-          <Text style={styles.firstName}>{dummyUser.firstName}</Text>
-          <Text style={styles.lastName}>{dummyUser.lastName}</Text>
+          <Text style={styles.firstName}>{userData.firstName}</Text>
+          <Text style={styles.lastName}>{userData.lastName}</Text>
         </View>
 
         {/* Action Buttons */}
@@ -57,23 +57,23 @@ export default function ProfileScreen() {
         <View style={styles.infoContainer}>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Joined</Text>
-            <Text style={styles.infoValue}>{dummyUser.dateJoined}</Text>
+            <Text style={styles.infoValue}>{userData.dateJoined}</Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Mutuals</Text>
-            <Text style={styles.infoValue}>{dummyUser.mutuals}</Text>
+            <Text style={styles.infoValue}>{userData.mutuals}</Text>
           </View>
         </View>
 
         {/* Bio Section */}
         <View style={styles.bioContainer}>
-          <Text style={styles.bio}>{dummyUser.bio}</Text>
+          <Text style={styles.bio}>{userData.bio}</Text>
         </View>
 
         {/* Hot Take Questions */}
         <View style={styles.hotTakesContainer}>
           <Text style={styles.hotTakesTitle}>Hot Takes</Text>
-          {dummyUser.hotTakes.map((take, index) => (
+          {userData.hotTakes.map((take, index) => (
             <View key={index} style={styles.hotTakeItem}>
               <Text style={styles.hotTakeQuestion}>{take.question}</Text>
               <Text style={styles.hotTakeAnswer}>{take.answer}</Text>

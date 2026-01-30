@@ -1,20 +1,26 @@
 import { Billboard, OrbitControls, useTexture } from '@react-three/drei/native';
 import { Canvas } from '@react-three/fiber';
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as THREE from 'three';
-import MOCK_DB from '../../assets/mock_data.json';
+// import MOCK_DB from '../assets/mock_data.json';
 
-// Accessing users for the galaxy
-const users = MOCK_DB.users;
 
-// Accessing the daily question
-const todaysQuestion = MOCK_DB.daily_hot_takes[0];
 
 // --- Types ---
+export type UserType = {
+  id: string;
+  name: string;
+  bio: string;
+  dob: string;
+  profile_picture: string;
+  events_gone_to: any[];
+  hot_take_answers: any[];
+};
+
 type Node = {
-  user: typeof users[0];
+  user: UserType;
   x: number;
   y: number;
   z: number;
@@ -22,11 +28,10 @@ type Node = {
   vec: THREE.Vector3; 
 };
 
-const NODE_COUNT = users.length; // Use all users
-
 // Generate data once
-function generateGalaxyData(): Node[] {
+function generateGalaxyData(users: UserType[]): Node[] {
   const nodes: Node[] = [];
+  const NODE_COUNT = users.length;
   for (let i = 0; i < NODE_COUNT; i++) {
     const user = users[i];
     const theta = Math.random() * 2 * Math.PI;
@@ -46,13 +51,23 @@ function generateGalaxyData(): Node[] {
   return nodes;
 }
 
-function GalaxyField({ 
-  onSelect 
+export function GalaxyField({ 
+  onSelect,
+  users
 }: { 
-  onSelect: (node: Node | null) => void 
+  onSelect: (node: Node | null) => void;
+  users: UserType[];
 }) {
+  console.log('GalaxyField rendering with users:', users.length);
+  
   // Generate nodes only once
-  const nodes = useMemo(() => generateGalaxyData(), []);
+  const nodes = useMemo(() => generateGalaxyData(users), [users]);
+  
+  // Safety check - return early if no nodes
+  if (nodes.length === 0) {
+    return null;
+  }
+  
   const textures = useTexture(nodes.map(node => node.user.profile_picture));
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   
@@ -92,22 +107,36 @@ function GalaxyField({
   );
 }
 
-export default function SocialGalaxyFast() {
+
+export function SocialGalaxy({ users }: { users: UserType[] }) {
   const [selectedUser, setSelectedUser] = useState<Node | null>(null);
   const { width, height } = useWindowDimensions();
 
+  console.log('SocialGalaxy rendering with users:', users.length);
+  console.log('Users data sample:', users.slice(0, 3).map(u => u.name));
+
+  if (!users || users.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.header}>No attendees found</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <View style={[styles.canvasLayer, { width, height }]}>
-        <Canvas 
-          camera={{ position: [0, 0, 30], fov: 60 }}
-          performance={{ min: 0.5 }}
-          gl={{ antialias: false, powerPreference: 'high-performance' }}
-        >
-          <color attach="background" args={["#101015"]} />
-          <OrbitControls makeDefault enablePan={false} enableZoom={true} enableRotate={true} rotateSpeed={2} zoomSpeed={0.1} />
-          <GalaxyField onSelect={setSelectedUser} />
-        </Canvas>
+      <View style={[styles.canvasLayer, { width, height }]}> 
+        <Suspense fallback={<Text style={{ color: 'white', textAlign: 'center', marginTop: 100 }}>Loading galaxy...</Text>}>
+          <Canvas 
+            camera={{ position: [0, 0, 30], fov: 60 }}
+            performance={{ min: 0.5 }}
+            gl={{ antialias: false, powerPreference: 'high-performance' }}
+          >
+            <color attach="background" args={["#101015"]} />
+            <OrbitControls makeDefault enablePan={false} enableZoom={true} enableRotate={true} rotateSpeed={2} zoomSpeed={0.1} />
+            <GalaxyField onSelect={setSelectedUser} users={users} />
+          </Canvas>
+        </Suspense>
       </View>
 
       <SafeAreaView style={styles.hudContainer} pointerEvents="box-none">

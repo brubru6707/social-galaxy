@@ -1,10 +1,11 @@
 import { Billboard, OrbitControls, useTexture } from '@react-three/drei/native';
 import { Canvas } from '@react-three/fiber';
 import React, { Suspense, useMemo, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as THREE from 'three';
 import mockData from '../assets/mock_data.json';
+import OtherProfile from './other-profile';
 
 
 
@@ -274,6 +275,7 @@ export function GalaxyField({
 export function SocialGalaxy({ users }: { users: UserType[] }) {
   const [selectedUser, setSelectedUser] = useState<Node | null>(null);
   const { width, height } = useWindowDimensions();
+  const [showProfile, setShowProfile] = useState(false);
 
   if (!users || users.length === 0) {
     return (
@@ -318,36 +320,41 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
         <Text style={styles.header}>SOCIAL GALAXY</Text>
         
         {selectedUser ? (
-          <View style={styles.card}>
-            <Image source={{ uri: selectedUser.user.profile_picture }} style={styles.profileImage} />
-            <Text style={styles.cardTitle}>{selectedUser.user.name}</Text>
-            {/* Match Score */}
-            {(() => {
-              // Get current user from mockData
-              const currentUserId = mockData.current_user;
-              const currentUserData = mockData.users.find((u: any) => u.id === currentUserId);
-              if (currentUserData) {
-                const score = require('./social-galaxy').calculateMatchScore(currentUserData, selectedUser.user);
-                return (
-                  <View style={{ alignItems: 'center', marginBottom: 8 }}>
-                    <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 16 }}>Match Score</Text>
-                    <Text style={{ color: '#FFD700', fontSize: 20 }}>{score}%</Text>
-                  </View>
-                );
-              }
-              return null;
-            })()}
-            <Text style={styles.cardBio}>{selectedUser.user.bio}</Text>
-            <Text style={styles.cardStats}>
-              Events attended: {selectedUser.user.events_gone_to.length} | Hot takes: {selectedUser.user.hot_take_answers.length}
-            </Text>
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={() => console.log(`Open profile for ${selectedUser.user.name}`)}
-            >
-              <Text style={styles.buttonText}>View Full Profile</Text>
-            </TouchableOpacity>
-          </View>
+          <>
+            <View style={styles.card}>
+              <Image source={{ uri: selectedUser.user.profile_picture }} style={styles.profileImage} />
+              <Text style={styles.cardTitle}>{selectedUser.user.name}</Text>
+              {/* Match Score */}
+              {(() => {
+                // Get current user from mockData
+                const currentUserId = mockData.current_user;
+                const currentUserData = mockData.users.find((u: any) => u.id === currentUserId);
+                if (currentUserData) {
+                  const score = require('./social-galaxy').calculateMatchScore(currentUserData, selectedUser.user);
+                  return (
+                    <View style={{ alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 16 }}>Match Score</Text>
+                      <Text style={{ color: '#FFD700', fontSize: 20 }}>{score}%</Text>
+                    </View>
+                  );
+                }
+                return null;
+              })()}
+              <Text style={styles.cardBio}>{selectedUser.user.bio}</Text>
+              <Text style={styles.cardStats}>
+                Events attended: {selectedUser.user.events_gone_to.length} | Hot takes: {selectedUser.user.hot_take_answers.length}
+              </Text>
+              <TouchableOpacity 
+                style={styles.button}
+                onPress={() => setShowProfile(true)}
+              >
+                <Text style={styles.buttonText}>View Full Profile</Text>
+              </TouchableOpacity>
+            </View>
+            <Modal visible={showProfile} transparent animationType="fade" onRequestClose={() => setShowProfile(false)}>
+              <OtherProfile user={selectedUser.user} onClose={() => setShowProfile(false)} />
+            </Modal>
+          </>
         ) : (
           <View style={styles.hint}>
             <Text style={styles.hintText}>Tap a star to view profile</Text>

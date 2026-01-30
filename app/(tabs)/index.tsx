@@ -57,6 +57,7 @@ export default function HomeScreen() {
 
   const { currentUser } = useUser();
   const [showModal, setShowModal] = useState(true);
+  const [answeredHotTake, setAnsweredHotTake] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [galaxyUsers, setGalaxyUsers] = useState<GalaxyUserType[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -207,13 +208,16 @@ export default function HomeScreen() {
               <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
                 <Text style={styles.closeText}>X</Text>
               </TouchableOpacity>
-              <Text style={styles.modalQuestion}>{questionText}</Text>
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.optionButton} onPress={() => setShowModal(false)}>
-                  <Text style={styles.optionText}>{option1}</Text>
+              <Text style={[styles.modalQuestion, { textAlign: 'center' }]}>{questionText}</Text>
+              <View style={styles.buttonContainerRow}>
+                <TouchableOpacity style={[styles.optionButton, styles.leftOptionButton]} onPress={() => { setShowModal(false); setAnsweredHotTake(questionText); }}>
+                  <Text style={styles.leftOptionText}>{option1}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.optionButton} onPress={() => setShowModal(false)}>
-                  <Text style={styles.optionText}>{option2}</Text>
+                <View style={styles.vsContainer}>
+                  <Text style={styles.vsText}>vs</Text>
+                </View>
+                <TouchableOpacity style={[styles.optionButton, styles.rightOptionButton]} onPress={() => { setShowModal(false); setAnsweredHotTake(questionText); }}>
+                  <Text style={styles.rightOptionText}>{option2}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -224,6 +228,15 @@ export default function HomeScreen() {
             {/* Fun Header */}
             <View style={styles.headerWrap}>
               <Text style={styles.logo}>partiful</Text>
+              {answeredHotTake && (
+                <View style={styles.hotTakeHeaderWrap}>
+                  <View style={styles.hotTakeRow}>
+                    <Text style={styles.hotTakeOptionLeft}>{option1}</Text>
+                    <Text style={styles.hotTakeVs}>vs</Text>
+                    <Text style={styles.hotTakeOptionRight}>{option2}</Text>
+                  </View>
+                </View>
+              )}
               <Text style={styles.greeting}>Hey, {currentUser?.name || 'Party Person'}! 🎉</Text>
               <Text style={styles.subtitle}>Your social universe, reimagined</Text>
             </View>
@@ -263,6 +276,93 @@ export default function HomeScreen() {
 
 const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
+  hotTakeHeaderWrap: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  hotTakeHeader: {
+    color: '#FFD700',
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 6,
+    textAlign: 'center',
+    maxWidth: '90%',
+  },
+    buttonContainerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 16,
+    },
+    leftOptionButton: {
+      backgroundColor: '#FF5CB3',
+      marginRight: 8,
+      borderRadius: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 18,
+    },
+    rightOptionButton: {
+      backgroundColor: '#4455aa',
+      marginLeft: 8,
+      borderRadius: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 18,
+    },
+    leftOptionText: {
+      color: '#fff',
+      fontWeight: 'bold',
+      fontSize: 16,
+    },
+    rightOptionText: {
+      color: '#fff',
+      fontWeight: 'bold',
+      fontSize: 16,
+    },
+    vsContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginHorizontal: 4,
+    },
+    vsText: {
+      color: '#aaa',
+      fontSize: 13,
+      fontWeight: 'bold',
+      marginBottom: 2,
+    },
+  hotTakeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  hotTakeOptionLeft: {
+    color: '#FF5CB3',
+    fontWeight: 'bold',
+    fontSize: 20,
+    textAlign: 'left',
+    flex: 1,
+  },
+  hotTakeVs: {
+    color: '#FFD700',
+    fontWeight: 'bold',
+    fontSize: 18,
+    textAlign: 'center',
+    flex: 0.5,
+  },
+  hotTakeOptionRight: {
+    color: '#4455aa',
+    fontWeight: 'bold',
+    fontSize: 20,
+    textAlign: 'right',
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#000',

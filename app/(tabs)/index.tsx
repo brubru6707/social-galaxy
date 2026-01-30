@@ -16,7 +16,7 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
 import { UserType as GalaxyUserType } from '../../components/lobby';
-import { GalaxyField } from '../../components/social-galaxy';
+import { GalaxyField, calculateMatchScore } from '../../components/social-galaxy';
 
 // Dummy data
 const recentActivities = [
@@ -207,10 +207,14 @@ export default function HomeScreen() {
               <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedUser(null)}>
                 <Text style={styles.closeText}>X</Text>
               </TouchableOpacity>
-              {selectedUser && (
+              {selectedUser && currentUserData && (
                 <>
                   <Image source={{ uri: selectedUser.user.profile_picture }} style={styles.profileImage} />
                   <Text style={styles.cardTitle}>{selectedUser.user.name}</Text>
+                  <View style={styles.matchScoreContainer}>
+                    <Text style={styles.matchScoreLabel}>Match Score</Text>
+                    <Text style={styles.matchScore}>{calculateMatchScore(currentUserData, selectedUser.user)}%</Text>
+                  </View>
                   <Text style={styles.cardBio}>{selectedUser.user.bio}</Text>
                   <Text style={styles.cardStats}>
                     Events attended: {selectedUser.user.events_gone_to.length} | Hot takes: {selectedUser.user.hot_take_answers.length}
@@ -404,6 +408,25 @@ const styles = StyleSheet.create({
   cardStats: {
     fontSize: 14,
     color: '#FFD700',
+    textAlign: 'center',
+  },
+  matchScoreContainer: {
+    backgroundColor: '#FFD700',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  matchScoreLabel: {
+    fontSize: 12,
+    color: '#000',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  matchScore: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#000',
     textAlign: 'center',
   },
   scrollContent: {

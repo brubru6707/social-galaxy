@@ -17,7 +17,7 @@ export type UserType = {
   profile_picture: string;
   events_gone_to: any[];
   hot_take_answers: any[];
-};
+}; 
 
 type Node = {
   user: UserType;
@@ -25,30 +25,137 @@ type Node = {
   y: number;
   z: number;
   // We keep position as a Vector3 for easy math later
-  vec: THREE.Vector3; 
+  vec: THREE.Vector3;
+  clusterId: number;
 };
 
-// Generate data once
-function generateGalaxyData(users: UserType[]): Node[] {
-  const nodes: Node[] = [];
-  const NODE_COUNT = users.length;
-  for (let i = 0; i < NODE_COUNT; i++) {
-    const user = users[i];
+type Cluster = {
+  id: number;
+  users: UserType[];
+  center: THREE.Vector3;
+};
+
+// Calculate similarity score between two users based on hot takes
+function calculateSimilarity(user1: UserType, user2: UserType): number {
+  const answers1 = user1.hot_take_answers || [];
+  const answers2 = user2.hot_take_answers || [];
+  console.log('[DEBUG] Comparing users:', user1.id, user2.id);
+  // console.log('[DEBUG] answers1:', answers1);
+  // console.log('[DEBUG] answers2:', answers2);
+  if (answers1.length === 0 || answers2.length === 0) {
+    console.log('[DEBUG] One or both users have no hot_take_answers');
+    return 0;
+  }
+  // Use 'answer' or 'selected_option' for answer value
+  const getAnswerValue = (a: any) => a.answer ?? a.selected_option;
+  // console.log('[DEBUG] answers1 fields:', answers1.map(a => ({ q: a.question_text, a: a.answer, so: a.selected_option })));
+  // console.log('[DEBUG] answers2 fields:', answers2.map(a => ({ q: a.question_text, a: a.answer, so: a.selected_option })));
+  // Create a map of question to answer for user1
+  const answerMap1 = new Map();
+  answers1.forEach((a: any) => {
+    const val = getAnswerValue(a);
+    if (a.question_text && val) {
+      answerMap1.set(a.question_text, val);
+    }
+  });
+  // Count matching answers
+  let matches = 0;
+  let totalComparisons = 0;
+  answers2.forEach((a: any) => {
+    const val = getAnswerValue(a);
+    if (a.question_text && val && answerMap1.has(a.question_text)) {
+      totalComparisons++;
+      if (answerMap1.get(a.question_text) === val) {
+        matches++;
+      }
+    }
+  });
+  console.log('[DEBUG] matches:', matches, 'totalComparisons:', totalComparisons);
+  const score = totalComparisons > 0 ? matches / totalComparisons : 0;
+  console.log('[DEBUG] similarity score:', score);
+  return score;
+}
+
+// --- 1. Tuning Parameters ---
+const GALAXY_RADIUS = 5; // Spread clusters far apart
+const CLUSTER_JITTER = 4; // Keep users tight within their cluster
+
+function clusterUsers(users: UserType[]): Cluster[] {
+  if (users.length === 0) return [];
+  const clusters: Cluster[] = [];
+  const assigned = new Set<string>();
+
+  users.forEach((user) => {
+    if (assigned.has(user.id)) return;
+
+    // Start a new cluster
+    const clusterUsersArr: UserType[] = [user];
+    assigned.add(user.id);
+
+    // Find ALL similar users for this person
+    users.forEach((otherUser) => {
+      if (user.id !== otherUser.id && !assigned.has(otherUser.id)) {
+        const similarity = calculateSimilarity(user, otherUser);
+        // Threshold: 30% match
+        if (similarity > 0.3) {
+          clusterUsersArr.push(otherUser);
+          assigned.add(otherUser.id);
+        }
+      }
+    });
+
+    // Place the Cluster Center far out in space (Radius 20)
     const theta = Math.random() * 2 * Math.PI;
     const phi = Math.acos(2 * Math.random() - 1);
-    const radius = 4 + Math.random() * 4; // Closer: 4-8 instead of 8-16 
+    const r = GALAXY_RADIUS;
 
-    const x = radius * Math.sin(phi) * Math.cos(theta);
-    const y = radius * Math.sin(phi) * Math.sin(theta);
-    const z = radius * Math.cos(phi);
+    const center = new THREE.Vector3(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.sin(phi) * Math.sin(theta),
+      r * Math.cos(phi)
+    );
 
-    nodes.push({
-      user,
-      x, y, z,
-      vec: new THREE.Vector3(x, y, z),
+    clusters.push({
+      id: clusters.length,
+      users: clusterUsersArr,
+      center
     });
-  }
+  });
+
+  return clusters;
+}
+
+// Generate data with clustering
+function generateGalaxyData(users: UserType[]): Node[] {
+  const clusters = clusterUsers(users);
+  const nodes: Node[] = [];
+
+  clusters.forEach((cluster) => {
+    cluster.users.forEach((user) => {
+      // --- VISUAL FIX 2: Tight Grouping ---
+      // Random offset is small (Jitter 4) relative to Galaxy Radius (20)
+      const offset = new THREE.Vector3(
+        (Math.random() - 0.5) * CLUSTER_JITTER,
+        (Math.random() - 0.5) * CLUSTER_JITTER,
+        (Math.random() - 0.5) * CLUSTER_JITTER
+      );
+      const position = cluster.center.clone().add(offset);
+      nodes.push({
+        user,
+        x: position.x,
+        y: position.y,
+        z: position.z,
+        vec: position,
+        clusterId: cluster.id
+      });
+    });
+  });
   return nodes;
+}
+
+// Calculate match percentage between current user and selected user
+export function calculateMatchScore(currentUser: UserType, selectedUser: UserType): number {
+  return Math.round(calculateSimilarity(currentUser, selectedUser) * 100);
 }
 
 export function GalaxyField({ 
@@ -92,7 +199,7 @@ export function GalaxyField({
         >
           <mesh
             geometry={circleGeometry}
-            scale={i === hoveredId ? [1.2, 1.2, 1] : [1, 1, 1]}
+            scale={i === hoveredId ? [2.4, 2.4, 1] : [2, 2, 1]}
             onClick={(e) => {
               e.stopPropagation();
               setHoveredId(i);
@@ -128,7 +235,7 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
       <View style={[styles.canvasLayer, { width, height }]}> 
         <Suspense fallback={<Text style={{ color: 'white', textAlign: 'center', marginTop: 100 }}>Loading galaxy...</Text>}>
           <Canvas 
-            camera={{ position: [0, 0, 30], fov: 60 }}
+            camera={{ position: [0, 0, 40], fov: 75 }}
             performance={{ min: 0.5 }}
             gl={{ antialias: false, powerPreference: 'high-performance' }}
           >

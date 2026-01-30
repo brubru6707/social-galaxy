@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { UserProvider } from '@/contexts/UserContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StyleSheet, View } from 'react-native';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -14,14 +15,25 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <UserProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </UserProvider>
+    <View style={styles.bg}>
+      <UserProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </UserProvider>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bg: {
+    flex: 1,
+    backgroundColor: '#000',
+    color: '#fff',
+  },
+});
+

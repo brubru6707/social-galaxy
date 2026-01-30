@@ -96,7 +96,7 @@ for i in range(NUM_USERS):
         "name": user_name,
         "bio": random.choice(BIOS),
         "dob": "2003-05-15",
-        "profile_picture": f"https://i.pravatar.cc/300?u={user_name}",
+        "profile_picture": f"https://robohash.org/{user_name}.png",
         "events_gone_to": user_events,
         "hot_take_answers": user_answers
     })
@@ -105,7 +105,8 @@ for i in range(NUM_USERS):
 final_db = {
     "users": users,
     "daily_hot_takes": hot_takes,
-    "events": events
+    "events": events,
+    "current_user": "u_0"
 }
 
 # Write to file

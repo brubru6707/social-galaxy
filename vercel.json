@@ -5,7 +5,7 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "web-build"
+        "distDir": "dist"
       }
     }
   ],
@@ -14,10 +14,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "functions": {
-    "src/pages/api/**/*.js": {
-      "runtime": "@vercel/node"
-    }
-  }
+  ]
 }

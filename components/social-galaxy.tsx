@@ -4,7 +4,7 @@ import React, { Suspense, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as THREE from 'three';
-// import MOCK_DB from '../assets/mock_data.json';
+import mockData from '../assets/mock_data.json';
 
 
 
@@ -77,49 +77,104 @@ function calculateSimilarity(user1: UserType, user2: UserType): number {
 }
 
 // --- 1. Tuning Parameters ---
-const GALAXY_RADIUS = 5; // Spread clusters far apart
-const CLUSTER_JITTER = 4; // Keep users tight within their cluster
+const GALAXY_RADIUS = 10; // Spread clusters far apart
+const CLUSTER_JITTER = 3; // Keep users tight within their cluster
 
+// --- OBJECTIVE CLUSTERING ALGORITHM ---
 function clusterUsers(users: UserType[]): Cluster[] {
   if (users.length === 0) return [];
+
+  // 1. Calculate ALL relationships first
+  type Relation = { u1: UserType; u2: UserType; score: number };
+  const allRelations: Relation[] = [];
+
+  for (let i = 0; i < users.length; i++) {
+    for (let j = i + 1; j < users.length; j++) {
+      const score = calculateSimilarity(users[i], users[j]);
+      // Only care about matches that are actually meaningful (>50%)
+      if (score > 0.5) { 
+        allRelations.push({ u1: users[i], u2: users[j], score });
+      }
+    }
+  }
+
+  // 2. Sort relationships: Strongest matches get first dibs!
+  // This removes the bias of "who comes first in the array"
+  allRelations.sort((a, b) => b.score - a.score);
+
   const clusters: Cluster[] = [];
   const assigned = new Set<string>();
+  const userToClusterMap = new Map<string, number>(); // Map UserId -> ClusterIndex
 
-  users.forEach((user) => {
-    if (assigned.has(user.id)) return;
+  // 3. Build clusters based on sorted strengths
+  allRelations.forEach((rel) => {
+    const u1Assigned = assigned.has(rel.u1.id);
+    const u2Assigned = assigned.has(rel.u2.id);
 
-    // Start a new cluster
-    const clusterUsersArr: UserType[] = [user];
-    assigned.add(user.id);
+    if (!u1Assigned && !u2Assigned) {
+      // CASE A: Neither is assigned. Create a NEW cluster.
+      // These two are a "Power Couple" (highest remaining match)
+      const newClusterId = clusters.length;
+      
+      // Random position for this new group
+      const theta = Math.random() * 2 * Math.PI;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = GALAXY_RADIUS; // Using your radius constant
+      
+      const center = new THREE.Vector3(
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.sin(phi) * Math.sin(theta),
+        r * Math.cos(phi)
+      );
 
-    // Find ALL similar users for this person
-    users.forEach((otherUser) => {
-      if (user.id !== otherUser.id && !assigned.has(otherUser.id)) {
-        const similarity = calculateSimilarity(user, otherUser);
-        // Threshold: 30% match
-        if (similarity > 0.3) {
-          clusterUsersArr.push(otherUser);
-          assigned.add(otherUser.id);
-        }
-      }
-    });
+      clusters.push({
+        id: newClusterId,
+        users: [rel.u1, rel.u2],
+        center
+      });
 
-    // Place the Cluster Center far out in space (Radius 20)
-    const theta = Math.random() * 2 * Math.PI;
-    const phi = Math.acos(2 * Math.random() - 1);
-    const r = GALAXY_RADIUS;
+      assigned.add(rel.u1.id);
+      assigned.add(rel.u2.id);
+      userToClusterMap.set(rel.u1.id, newClusterId);
+      userToClusterMap.set(rel.u2.id, newClusterId);
 
-    const center = new THREE.Vector3(
-      r * Math.sin(phi) * Math.cos(theta),
-      r * Math.sin(phi) * Math.sin(theta),
-      r * Math.cos(phi)
-    );
+    } else if (u1Assigned && !u2Assigned) {
+      // CASE B: U1 is already in a cluster. U2 wants to join.
+      // Since we are sorting by strength, this is a strong link. Let them in.
+      const clusterId = userToClusterMap.get(rel.u1.id)!;
+      clusters[clusterId].users.push(rel.u2);
+      assigned.add(rel.u2.id);
+      userToClusterMap.set(rel.u2.id, clusterId);
 
-    clusters.push({
-      id: clusters.length,
-      users: clusterUsersArr,
-      center
-    });
+    } else if (!u1Assigned && u2Assigned) {
+      // CASE C: U2 is already in a cluster. U1 wants to join.
+      const clusterId = userToClusterMap.get(rel.u2.id)!;
+      clusters[clusterId].users.push(rel.u1);
+      assigned.add(rel.u1.id);
+      userToClusterMap.set(rel.u1.id, clusterId);
+    }
+    // CASE D: Both assigned. Do nothing (they are already in groups).
+    // In a more complex algo, you might merge clusters here, but skip for now.
+  });
+
+  // 4. Handle Loners (Anyone not strong enough to join a group)
+  users.forEach(user => {
+    if (!assigned.has(user.id)) {
+      // Create a solo cluster for them
+      const theta = Math.random() * 2 * Math.PI;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = GALAXY_RADIUS; 
+
+      clusters.push({
+        id: clusters.length,
+        users: [user],
+        center: new THREE.Vector3(
+          r * Math.sin(phi) * Math.cos(theta),
+          r * Math.sin(phi) * Math.sin(theta),
+          r * Math.cos(phi)
+        )
+      });
+    }
   });
 
   return clusters;
@@ -165,10 +220,11 @@ export function GalaxyField({
   onSelect: (node: Node | null) => void;
   users: UserType[];
 }) {
-  console.log('GalaxyField rendering with users:', users.length);
-  
   // Generate nodes only once
-  const nodes = useMemo(() => generateGalaxyData(users), [users]);
+  const nodes = useMemo(() => {
+    const generatedNodes = generateGalaxyData(users);
+    return generatedNodes;
+  }, [users]);
   
   // Safety check - return early if no nodes
   if (nodes.length === 0) {
@@ -219,9 +275,6 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
   const [selectedUser, setSelectedUser] = useState<Node | null>(null);
   const { width, height } = useWindowDimensions();
 
-  console.log('SocialGalaxy rendering with users:', users.length);
-  console.log('Users data sample:', users.slice(0, 3).map(u => u.name));
-
   if (!users || users.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
@@ -235,12 +288,27 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
       <View style={[styles.canvasLayer, { width, height }]}> 
         <Suspense fallback={<Text style={{ color: 'white', textAlign: 'center', marginTop: 100 }}>Loading galaxy...</Text>}>
           <Canvas 
-            camera={{ position: [0, 0, 40], fov: 75 }}
+            camera={{ 
+              position: [0, 0, 30], 
+              fov: 75,
+              near: 0.1,
+              far: 1000
+            }}
             performance={{ min: 0.5 }}
             gl={{ antialias: false, powerPreference: 'high-performance' }}
           >
-            <color attach="background" args={["#101015"]} />
-            <OrbitControls makeDefault enablePan={false} enableZoom={true} enableRotate={true} rotateSpeed={2} zoomSpeed={0.1} />
+            <color attach="background" args={["#000000"]} />
+            <OrbitControls 
+              makeDefault 
+              enablePan={false} 
+              enableZoom={true} 
+              enableRotate={true} 
+              rotateSpeed={0.5}
+              zoomSpeed={0.5}
+              minDistance={15}
+              maxDistance={50}
+              target={[0, 0, 0]}
+            />
             <GalaxyField onSelect={setSelectedUser} users={users} />
           </Canvas>
         </Suspense>
@@ -253,6 +321,22 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
           <View style={styles.card}>
             <Image source={{ uri: selectedUser.user.profile_picture }} style={styles.profileImage} />
             <Text style={styles.cardTitle}>{selectedUser.user.name}</Text>
+            {/* Match Score */}
+            {(() => {
+              // Get current user from mockData
+              const currentUserId = mockData.current_user;
+              const currentUserData = mockData.users.find((u: any) => u.id === currentUserId);
+              if (currentUserData) {
+                const score = require('./social-galaxy').calculateMatchScore(currentUserData, selectedUser.user);
+                return (
+                  <View style={{ alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 16 }}>Match Score</Text>
+                    <Text style={{ color: '#FFD700', fontSize: 20 }}>{score}%</Text>
+                  </View>
+                );
+              }
+              return null;
+            })()}
             <Text style={styles.cardBio}>{selectedUser.user.bio}</Text>
             <Text style={styles.cardStats}>
               Events attended: {selectedUser.user.events_gone_to.length} | Hot takes: {selectedUser.user.hot_take_answers.length}

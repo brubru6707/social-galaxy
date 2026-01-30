@@ -1,7 +1,5 @@
 import { useUser } from '@/contexts/UserContext';
-import { OrbitControls } from '@react-three/drei/native';
-import { Canvas } from '@react-three/fiber';
-import React, { Suspense, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -15,8 +13,9 @@ import {
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
+import EventDetails from '../../components/event-details';
 import { UserType as GalaxyUserType } from '../../components/lobby';
-import { GalaxyField, calculateMatchScore } from '../../components/social-galaxy';
+import { SocialGalaxy, calculateMatchScore } from '../../components/social-galaxy';
 
 // Dummy data
 const recentActivities = [
@@ -58,49 +57,89 @@ export default function HomeScreen() {
 
   const { currentUser } = useUser();
   const [showModal, setShowModal] = useState(true);
-  const [galaxyVisible, setGalaxyVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [galaxyUsers, setGalaxyUsers] = useState<GalaxyUserType[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [activePage, setActivePage] = useState(0); // 0: Event, 1: Lobby
+  const [showGalaxy, setShowGalaxy] = useState(false);
 
   const firstQuestion = currentUserData?.hot_take_answers?.[0];
   const questionText = firstQuestion?.question_text || '';
   const [option1, option2] = questionText.split(' vs ');
 
   function handleEventPress(event: EventType) {
-    console.log('Event clicked:', event.title);
-    console.log('Event attendees:', event.attendees);
-    
-    // Find users who are attendees of the event
+    setSelectedEvent(event);
+    setShowModal(false);
+    // Set galaxyUsers for this event
     const users = mockData.users.filter((u: GalaxyUserType) => event.attendees.includes(u.id));
-    console.log('Filtered users:', users.length, users);
-    
-    if (users.length === 0) {
-      console.warn('No attendees found for event:', event.title);
-      return;
-    }
-    
-    console.log('Setting galaxyUsers to', users.length);
     setGalaxyUsers(users);
-    console.log('Setting showModal to false');
-    setShowModal(false); // Close hot question modal first
-    setTimeout(() => {
-      console.log('Setting galaxyVisible to true');
-      setGalaxyVisible(true);
-    }, 300); // Wait for modal close animation
+    setActivePage(0); // Always start at Event Details
+  }
+
+  function handleCloseEventDetails() {
+    setSelectedEvent(null);
+    setActivePage(0);
+  }
+
+  if (showGalaxy && selectedEvent) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Social Galaxy</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={() => setShowGalaxy(false)}>
+            <Text style={styles.closeText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1 }}>
+          <SocialGalaxy users={galaxyUsers} />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
-    galaxyVisible ? (
+    selectedEvent ? (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>EVENT VIEWS</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setGalaxyVisible(false)}>
+          <Text style={styles.title}>Event Details</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={handleCloseEventDetails}>
             <Text style={styles.closeText}>X</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView ref={scrollViewRef} horizontal scrollEnabled={false} pagingEnabled={false} showsHorizontalScrollIndicator={false}>
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={e => {
+            const page = Math.round(e.nativeEvent.contentOffset.x / width);
+            setActivePage(page);
+          }}
+          contentOffset={{ x: activePage * width, y: 0 }}
+        >
+          {/* Event Details Page */}
           <View style={{ width }}>
+            <EventDetails event={selectedEvent} />
+            <PanGestureHandler
+              onHandlerStateChange={(event) => {
+                if (event.nativeEvent.state === State.END) {
+                  const { translationX } = event.nativeEvent;
+                  if (translationX < -50) {
+                    scrollViewRef.current?.scrollTo({ x: width, animated: true });
+                    setActivePage(1);
+                  }
+                }
+              }}
+            >
+              <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 60, zIndex: 10 }} />
+            </PanGestureHandler>
+          </View>
+          {/* Lobby Page */}
+          <View style={{ width }}>
+            <TouchableOpacity style={[styles.actionButton, { position: 'absolute', top: 20, right: 20, backgroundColor: '#FF5CB3', zIndex: 20 }]} onPress={() => setShowGalaxy(true)}>
+              <Text style={styles.actionButtonText}>Social Galaxy</Text>
+            </TouchableOpacity>
             <ScrollView contentContainerStyle={styles.lobbyScroll}>
               {galaxyUsers.length === 0 ? (
                 <Text style={styles.emptyText}>No attendees found</Text>
@@ -120,83 +159,17 @@ export default function HomeScreen() {
               )}
             </ScrollView>
             <PanGestureHandler
-              onGestureEvent={(event) => {
-                // Handle horizontal swipe at top of lobby
-              }}
               onHandlerStateChange={(event) => {
                 if (event.nativeEvent.state === State.END) {
                   const { translationX } = event.nativeEvent;
-                  if (Math.abs(translationX) > 50) {
-                    const targetX = translationX > 0 ? 0 : width;
-                    scrollViewRef.current?.scrollTo({ x: targetX, animated: true });
+                  if (translationX > 50) {
+                    scrollViewRef.current?.scrollTo({ x: 0, animated: true });
+                    setActivePage(0);
                   }
                 }
               }}
             >
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20%', zIndex: 10 }} />
-            </PanGestureHandler>
-            <PanGestureHandler
-              onGestureEvent={(event) => {
-                // Handle horizontal swipe at bottom of lobby
-              }}
-              onHandlerStateChange={(event) => {
-                if (event.nativeEvent.state === State.END) {
-                  const { translationX } = event.nativeEvent;
-                  if (Math.abs(translationX) > 50) {
-                    const targetX = translationX > 0 ? 0 : width;
-                    scrollViewRef.current?.scrollTo({ x: targetX, animated: true });
-                  }
-                }
-              }}
-            >
-              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '20%', zIndex: 10 }} />
-            </PanGestureHandler>
-          </View>
-          <View style={{ width }}>
-            <View style={styles.canvasLayer}>
-              <Suspense fallback={<Text style={{ color: 'white', textAlign: 'center', marginTop: 100 }}>Loading galaxy...</Text>}>
-                <Canvas 
-                  camera={{ position: [0, 0, 30], fov: 60 }}
-                  performance={{ min: 0.5 }}
-                  gl={{ antialias: false, powerPreference: 'high-performance' }}
-                >
-                  <color attach="background" args={["#000000"]} />
-                  <OrbitControls makeDefault enablePan={false} enableZoom={true} enableRotate={true} rotateSpeed={2} zoomSpeed={0.1} />
-                  <GalaxyField onSelect={setSelectedUser} users={galaxyUsers} />
-                </Canvas>
-              </Suspense>
-            </View>
-            <PanGestureHandler
-              onGestureEvent={(event) => {
-                // Handle horizontal swipe at top
-              }}
-              onHandlerStateChange={(event) => {
-                if (event.nativeEvent.state === State.END) {
-                  const { translationX } = event.nativeEvent;
-                  if (Math.abs(translationX) > 50) {
-                    const targetX = translationX > 0 ? 0 : width;
-                    scrollViewRef.current?.scrollTo({ x: targetX, animated: true });
-                  }
-                }
-              }}
-            >
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20%', zIndex: 10 }} />
-            </PanGestureHandler>
-            <PanGestureHandler
-              onGestureEvent={(event) => {
-                // Handle horizontal swipe at bottom
-              }}
-              onHandlerStateChange={(event) => {
-                if (event.nativeEvent.state === State.END) {
-                  const { translationX } = event.nativeEvent;
-                  if (Math.abs(translationX) > 50) {
-                    const targetX = translationX > 0 ? 0 : width;
-                    scrollViewRef.current?.scrollTo({ x: targetX, animated: true });
-                  }
-                }
-              }}
-            >
-              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '20%', zIndex: 10 }} />
+              <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 60, zIndex: 10 }} />
             </PanGestureHandler>
           </View>
         </ScrollView>
@@ -307,16 +280,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-  closeButton: {
-    backgroundColor: '#222',
-    borderRadius: 20,
-    padding: 10,
-  },
-  closeText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   lobbyScroll: {
     padding: 20,
   },
@@ -363,22 +326,7 @@ const styles = StyleSheet.create({
   },
   canvasLayer: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    zIndex: 1,
-    width,
-    height: Dimensions.get('window').height - 100, // Adjust for header
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userProfileModal: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    padding: 20,
+    // Removed duplicate modalOverlay, closeButton, and closeText definitions
     width: '80%',
     alignItems: 'center',
     borderWidth: 1,
@@ -637,5 +585,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  userProfileModal: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
   },
 });

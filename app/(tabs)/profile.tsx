@@ -18,7 +18,7 @@ export default function ProfileScreen() {
     bio: currentUser?.bio || 'No bio available',
     hotTakes: currentUser?.hot_take_answers?.map((take: any) => ({
       question: take.question_text || 'Unknown question',
-      answer: take.answer || 'No answer'
+      answer: take.answer ?? take.selected_option ?? 'No answer'
     })) || [],
   };
 

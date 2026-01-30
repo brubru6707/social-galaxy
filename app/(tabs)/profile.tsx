@@ -1,11 +1,50 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useUser } from '@/contexts/UserContext';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import stickers from '../../assets/stickers.json';
 
 export default function ProfileScreen() {
   const { currentUser } = useUser();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [emojiPositions, setEmojiPositions] = useState<{[key: number]: {x: number, y: number}}>({});
+  const gestureStartPositions = useRef<{[key: number]: {x: number, y: number}}>({});
+  const emojiAnimValues = useRef<{[key: number]: {translateX: Animated.Value, translateY: Animated.Value, scale: Animated.Value}}>({});
+
+  // Debug: log when emojiPositions changes
+  React.useEffect(() => {
+    console.log('[DEBUG] emojiPositions changed:', emojiPositions);
+    // Sync Animated values with state
+    Object.keys(emojiPositions).forEach(indexStr => {
+      const index = parseInt(indexStr);
+      const anim = getEmojiAnim(index);
+      const pos = emojiPositions[index];
+      if (pos) {
+        anim.translateX.setValue(pos.x);
+        anim.translateY.setValue(pos.y);
+      }
+    });
+  }, [emojiPositions]);
+
+  // Function to get emoji based on answer
+  const getAnswerEmoji = (answer: string) => {
+    return stickers[answer] || '⭐';
+  };
+
+  // Get or create animated values for emoji at index
+  const getEmojiAnim = (index: number) => {
+    if (!emojiAnimValues.current[index]) {
+      console.log(`[DEBUG] Creating new anim values for emoji ${index}`);
+      emojiAnimValues.current[index] = {
+        translateX: new Animated.Value(0),
+        translateY: new Animated.Value(0),
+        scale: new Animated.Value(1)
+      };
+    }
+    return emojiAnimValues.current[index];
+  };
 
   // Map currentUser data to the expected format
   const userData = {
@@ -24,7 +63,11 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header with Gear Icon */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.gearButton}>
@@ -73,12 +116,89 @@ export default function ProfileScreen() {
         {/* Hot Take Questions */}
         <View style={styles.hotTakesContainer}>
           <Text style={styles.hotTakesTitle}>Hot Takes</Text>
-          {userData.hotTakes.map((take, index) => (
-            <View key={index} style={styles.hotTakeItem}>
-              <Text style={styles.hotTakeQuestion}>{take.question}</Text>
-              <Text style={styles.hotTakeAnswer}>{take.answer}</Text>
-            </View>
-          ))}
+          {userData.hotTakes.map((take, index) => {
+            const emojiAnim = getEmojiAnim(index);
+            return (
+              <View key={index} style={styles.hotTakeItem}>
+                <Text style={styles.hotTakeQuestion}>{take.question}</Text>
+                <View style={styles.hotTakeAnswerContainer}>
+                  <Text style={styles.hotTakeAnswer}>{take.answer}</Text>
+                  <PanGestureHandler
+                    minDurationMs={500} // Require long press to activate drag
+                    activeOffsetX={[-10, 10]}
+                    activeOffsetY={[-10, 10]}
+                    simultaneousHandlers={[]}
+                      onGestureEvent={Animated.event(
+                        [],
+                        {
+                          useNativeDriver: false,
+                          listener: (event) => {
+                            console.log(`[DEBUG] Emoji ${index} gesture - translationX: ${event.nativeEvent.translationX}, translationY: ${event.nativeEvent.translationY}`);
+                            const startPos = gestureStartPositions.current[index] || { x: 0, y: 0 };
+                            console.log(`[DEBUG] Emoji ${index} using startPos x: ${startPos.x}, y: ${startPos.y}`);
+                            const anim = getEmojiAnim(index);
+                            // Update animated values based on start position + current translation
+                            anim.translateX.setValue(startPos.x + event.nativeEvent.translationX);
+                            anim.translateY.setValue(startPos.y + event.nativeEvent.translationY);
+                            // Also update state for persistence
+                            setEmojiPositions(prev => ({
+                              ...prev,
+                              [index]: {
+                                x: startPos.x + event.nativeEvent.translationX,
+                                y: startPos.y + event.nativeEvent.translationY,
+                              }
+                            }));
+                          }
+                        }
+                      )}
+                      onHandlerStateChange={(event) => {
+                        console.log(`[DEBUG] Emoji ${index} state change - state: ${event.nativeEvent.state}`);
+                        if (event.nativeEvent.state === State.BEGAN) {
+                          console.log(`[DEBUG] Emoji ${index} drag BEGAN - current position x: ${getEmojiAnim(index).translateX._value}, y: ${getEmojiAnim(index).translateY._value}`);
+                          // Store the current position as the gesture start position
+                          gestureStartPositions.current[index] = {
+                            x: getEmojiAnim(index).translateX._value,
+                            y: getEmojiAnim(index).translateY._value,
+                          };
+                          console.log(`[DEBUG] Emoji ${index} gesture start position set to x: ${gestureStartPositions.current[index].x}, y: ${gestureStartPositions.current[index].y}`);
+                          Animated.spring(getEmojiAnim(index).scale, {
+                            toValue: 1.5,
+                            useNativeDriver: false,
+                          }).start();
+                        } else if (
+                          event.nativeEvent.state === State.END ||
+                          event.nativeEvent.state === State.CANCELLED ||
+                          event.nativeEvent.state === State.FAILED
+                        ) {
+                          console.log(`[DEBUG] Emoji ${index} drag ENDED - final position x: ${getEmojiAnim(index).translateX._value}, y: ${getEmojiAnim(index).translateY._value}`);
+                          Animated.spring(getEmojiAnim(index).scale, {
+                            toValue: 1,
+                            useNativeDriver: false,
+                          }).start();
+                        }
+                      }}
+                  >
+                    <Animated.View
+                      style={[
+                        styles.draggableEmoji,
+                        {
+                          transform: [
+                            { translateX: getEmojiAnim(index).translateX },
+                            { translateY: getEmojiAnim(index).translateY },
+                            { scale: getEmojiAnim(index).scale }
+                          ],
+                          zIndex: 9999,
+                          elevation: 9999,
+                        }
+                      ]}
+                    >
+                      <Text style={styles.stickerEmoji}>{getAnswerEmoji(take.answer)}</Text>
+                    </Animated.View>
+                  </PanGestureHandler>
+                </View>
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -202,9 +322,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 5,
   },
+  hotTakeAnswerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'relative',
+    minHeight: 40, // Give space for dragging
+  },
   hotTakeAnswer: {
     fontSize: 16,
     color: '#FFD700',
     fontWeight: 'bold',
+    flex: 1,
+  },
+  draggableEmoji: {
+    // No absolute positioning, allow dragging in place
+  },
+  stickerEmoji: {
+    fontSize: 30,
+    marginLeft: 10,
   },
 });

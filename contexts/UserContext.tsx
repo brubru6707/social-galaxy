@@ -16,6 +16,14 @@ interface UserContextType {
   currentUser: User | null;
   allUsers: User[];
   setCurrentUser: (user: User | null) => void;
+  dailyQuestion: { question: string; left: string; right: string } | null;
+  votes: { left: number; right: number };
+  setDailyQuestion: (q: { question: string; left: string; right: string } | null) => void;
+  addVote: (side: 'left' | 'right') => void;
+  endDay: () => void;
+  newDay: () => void;
+  showResults: boolean;
+  setShowResults: (show: boolean) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -31,6 +39,36 @@ export const useUser = () => {
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [dailyQuestion, setDailyQuestion] = useState<{ question: string; left: string; right: string } | null>({
+    question: 'Coffee vs Tea',
+    left: 'Coffee',
+    right: 'Tea'
+  });
+  const [votes, setVotes] = useState({ left: 0, right: 0 });
+  const [showResults, setShowResults] = useState(false);
+
+  const addVote = (side: 'left' | 'right') => {
+    setVotes(prev => ({ ...prev, [side]: prev[side] + 1 }));
+  };
+
+  const endDay = () => {
+    setShowResults(true);
+  };
+
+  const newDay = () => {
+    setShowResults(false);
+    // Show percentages (handled in admin), then pick new question
+    // For now, cycle through some questions
+    const questions = [
+      { question: 'Coffee vs Tea', left: 'Coffee', right: 'Tea' },
+      { question: 'Pizza vs Burgers', left: 'Pizza', right: 'Burgers' },
+      { question: 'Vim vs Emacs', left: 'Vim', right: 'Emacs' },
+    ];
+    const currentIndex = dailyQuestion ? questions.findIndex(q => q.question === dailyQuestion.question) : -1;
+    const nextIndex = (currentIndex + 1) % questions.length;
+    setDailyQuestion(questions[nextIndex]);
+    setVotes({ left: 0, right: 0 }); // Reset votes for new day
+  };
 
   useEffect(() => {
     // Load mock data
@@ -56,7 +94,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser }}>
+    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults }}>
       {children}
     </UserContext.Provider>
   );

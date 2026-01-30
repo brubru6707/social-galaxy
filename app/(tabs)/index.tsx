@@ -1,6 +1,7 @@
 import { useUser } from '@/contexts/UserContext';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Dimensions,
   Image,
   Modal,
@@ -13,6 +14,7 @@ import {
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
+import Confetti from '../../components/Confetti';
 import EventDetails from '../../components/event-details';
 import { UserType as GalaxyUserType } from '../../components/lobby';
 import { SocialGalaxy, calculateMatchScore } from '../../components/social-galaxy';
@@ -55,7 +57,12 @@ export default function HomeScreen() {
   const userEventIds = currentUserData?.events_gone_to?.map(e => e.id) || [];
   const recentEvents = allEvents.filter(e => userEventIds.includes(e.id));
 
-  const { currentUser } = useUser();
+  const { currentUser, dailyQuestion, addVote, showResults, setShowResults, votes } = useUser();
+  // Fake random results - only calculated once when results are shown
+  const [finalLeftPercent, setFinalLeftPercent] = useState(0);
+  const [finalRightPercent, setFinalRightPercent] = useState(0);
+  const leftAnim = useRef(new Animated.Value(0)).current;
+  const rightAnim = useRef(new Animated.Value(0)).current;
   const [showModal, setShowModal] = useState(true);
   const [answeredHotTake, setAnsweredHotTake] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
@@ -64,10 +71,64 @@ export default function HomeScreen() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [activePage, setActivePage] = useState(0); // 0: Event, 1: Lobby
   const [showGalaxy, setShowGalaxy] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
-  const firstQuestion = currentUserData?.hot_take_answers?.[0];
-  const questionText = firstQuestion?.question_text || '';
-  const [option1, option2] = questionText.split(' vs ');
+  // Reset percentages and animations when results are hidden
+  useEffect(() => {
+    if (!showResults) {
+      setFinalLeftPercent(0);
+      setFinalRightPercent(0);
+      leftAnim.setValue(0);
+      rightAnim.setValue(0);
+      setShowConfetti(false);
+    }
+  }, [showResults, leftAnim, rightAnim]);
+
+  // Show modal for new question
+  useEffect(() => {
+    if (dailyQuestion && answeredHotTake !== dailyQuestion.question) {
+      setShowModal(true);
+      setAnsweredHotTake(null); // Reset answered state for new question
+    }
+  }, [dailyQuestion, answeredHotTake]);
+
+  // Set final percentages once when results are shown
+  useEffect(() => {
+    if (showResults && answeredHotTake && finalLeftPercent === 0) {
+      const leftVotes = Math.floor(Math.random() * 1000) + 100;
+      const rightVotes = Math.floor(Math.random() * 1000) + 100;
+      const totalVotes = leftVotes + rightVotes;
+      const leftPercent = Math.round((leftVotes / totalVotes) * 100);
+      const rightPercent = 100 - leftPercent;
+      setFinalLeftPercent(leftPercent);
+      setFinalRightPercent(rightPercent);
+    }
+  }, [showResults, answeredHotTake, finalLeftPercent]);
+
+  useEffect(() => {
+    if (answeredHotTake && showResults && finalLeftPercent > 0) {
+      Animated.parallel([
+        Animated.timing(leftAnim, {
+          toValue: finalLeftPercent,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(rightAnim, {
+          toValue: finalRightPercent,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+      ]).start(() => {
+        setShowConfetti(true);
+        // Reset confetti after animation
+        setTimeout(() => setShowConfetti(false), 4000);
+      });
+    }
+  }, [answeredHotTake, showResults, leftAnim, rightAnim, finalLeftPercent, finalRightPercent]);
+
+  const questionText = dailyQuestion ? dailyQuestion.question : '';
+  const option1 = dailyQuestion ? dailyQuestion.left : '';
+  const option2 = dailyQuestion ? dailyQuestion.right : '';
 
   function handleEventPress(event: EventType) {
     setSelectedEvent(event);
@@ -100,7 +161,8 @@ export default function HomeScreen() {
   }
 
   return (
-    selectedEvent ? (
+    <>
+      {selectedEvent ?
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Event Details</Text>
@@ -199,7 +261,7 @@ export default function HomeScreen() {
           </View>
         </Modal>
       </SafeAreaView>
-    ) : (
+      : 
       <>
         {/* Hot Question Modal */}
         <Modal visible={showModal} transparent animationType="fade">
@@ -210,13 +272,13 @@ export default function HomeScreen() {
               </TouchableOpacity>
               <Text style={[styles.modalQuestion, { textAlign: 'center' }]}>{questionText}</Text>
               <View style={styles.buttonContainerRow}>
-                <TouchableOpacity style={[styles.optionButton, styles.leftOptionButton]} onPress={() => { setShowModal(false); setAnsweredHotTake(questionText); }}>
+                <TouchableOpacity style={[styles.optionButton, styles.leftOptionButton]} onPress={() => { setShowModal(false); setAnsweredHotTake(questionText); addVote('left'); }}>
                   <Text style={styles.leftOptionText}>{option1}</Text>
                 </TouchableOpacity>
                 <View style={styles.vsContainer}>
                   <Text style={styles.vsText}>vs</Text>
                 </View>
-                <TouchableOpacity style={[styles.optionButton, styles.rightOptionButton]} onPress={() => { setShowModal(false); setAnsweredHotTake(questionText); }}>
+                <TouchableOpacity style={[styles.optionButton, styles.rightOptionButton]} onPress={() => { setShowModal(false); setAnsweredHotTake(questionText); addVote('right'); }}>
                   <Text style={styles.rightOptionText}>{option2}</Text>
                 </TouchableOpacity>
               </View>
@@ -230,11 +292,33 @@ export default function HomeScreen() {
               <Text style={styles.logo}>partiful</Text>
               {answeredHotTake && (
                 <View style={styles.hotTakeHeaderWrap}>
-                  <View style={styles.hotTakeRow}>
-                    <Text style={styles.hotTakeOptionLeft}>{option1}</Text>
-                    <Text style={styles.hotTakeVs}>vs</Text>
-                    <Text style={styles.hotTakeOptionRight}>{option2}</Text>
-                  </View>
+                  {showResults ? (
+                    <View style={styles.progressContainer}>
+                      <View style={styles.percentageContainer}>
+                        <Text style={styles.percentageText}>{finalLeftPercent}%</Text>
+                        <Text style={styles.percentageText}>{finalRightPercent}%</Text>
+                      </View>
+                      <View style={styles.barContainer}>
+                        <Animated.View style={[styles.leftBar, { width: leftAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }]}>
+                          <Text style={styles.barText}>{option1}</Text>
+                        </Animated.View>
+                        <Animated.View style={[styles.rightBar, { width: rightAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }]}>
+                          <Text style={styles.barText}>{option2}</Text>
+                        </Animated.View>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.questionContainer}>
+                      <Text style={styles.questionText}>{questionText}</Text>
+                      <View style={styles.optionsRow}>
+                        <Text style={[styles.optionText, styles.leftOption]}>{option1}</Text>
+                        <View style={styles.vsContainer}>
+                          <Text style={styles.vsText}>vs</Text>
+                        </View>
+                        <Text style={[styles.optionText, styles.rightOption]}>{option2}</Text>
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
               <Text style={styles.greeting}>Hey, {currentUser?.name || 'Party Person'}! 🎉</Text>
@@ -269,8 +353,10 @@ export default function HomeScreen() {
 
           </ScrollView>
         </SafeAreaView>
+        <Confetti active={showConfetti} />
       </>
-    )
+}
+    </>
   );
 }
 
@@ -336,32 +422,80 @@ const styles = StyleSheet.create({
       fontWeight: 'bold',
       marginBottom: 2,
     },
-  hotTakeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  progressContainer: {
     alignItems: 'center',
     width: '100%',
   },
-  hotTakeOptionLeft: {
-    color: '#FF5CB3',
-    fontWeight: 'bold',
-    fontSize: 20,
-    textAlign: 'left',
-    flex: 1,
+  percentageContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
   },
-  hotTakeVs: {
+  percentageText: {
     color: '#FFD700',
+    fontSize: 16,
     fontWeight: 'bold',
-    fontSize: 18,
-    textAlign: 'center',
-    flex: 0.5,
   },
-  hotTakeOptionRight: {
-    color: '#4455aa',
+  questionContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  questionText: {
+    color: '#FFD700',
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 20,
-    textAlign: 'right',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  optionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
     flex: 1,
+  },
+  leftOption: {
+    color: '#FF5CB3',
+    textAlign: 'left',
+  },
+  rightOption: {
+    color: '#4455aa',
+    textAlign: 'right',
+  },
+  barContainer: {
+    position: 'relative',
+    height: 30,
+    width: '100%',
+    backgroundColor: '#333',
+    borderRadius: 10,
+  },
+  leftBar: {
+    position: 'absolute',
+    left: 0,
+    height: '100%',
+    backgroundColor: '#FF5CB3',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rightBar: {
+    position: 'absolute',
+    right: 0,
+    height: '100%',
+    backgroundColor: '#4455aa',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  barText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   container: {
     flex: 1,
@@ -680,7 +814,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     alignItems: 'center',
   },
-  optionText: {
+  modalOptionText: {
     color: '#fff',
     textAlign: 'center',
     fontSize: 18,
@@ -694,5 +828,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#333',
+  },
+  resultsModal: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  resultsTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginBottom: 20,
+  },
+  resultsQuestion: {
+    fontSize: 18,
+    color: '#fff',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  resultsStats: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  resultsOption: {
+    fontSize: 16,
+    color: '#ccc',
+    marginBottom: 10,
+  },
+  closeResultsButton: {
+    backgroundColor: '#FF5CB3',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  closeResultsText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

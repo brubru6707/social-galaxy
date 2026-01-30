@@ -1,14 +1,17 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useUser } from '@/contexts/UserContext';
+import * as Sharing from 'expo-sharing';
 import React, { useRef, useState } from 'react';
-import { Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { captureRef } from 'react-native-view-shot';
 import stickers from '../../assets/stickers.json';
 
 export default function ProfileScreen() {
   const { currentUser } = useUser();
   const scrollViewRef = useRef<ScrollView>(null);
+  const profileCaptureRef = useRef<View>(null);
   const [emojiPositions, setEmojiPositions] = useState<{[key: number]: {x: number, y: number}}>({});
   const gestureStartPositions = useRef<{[key: number]: {x: number, y: number}}>({});
   const emojiAnimValues = useRef<{[key: number]: {translateX: Animated.Value, translateY: Animated.Value, scale: Animated.Value}}>({});
@@ -68,49 +71,70 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with Gear Icon */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.gearButton}>
-            <IconSymbol size={24} name="gear" color="#fff" />
-          </TouchableOpacity>
-        </View>
+        {/* Everything above Hot Takes */}
+        <View ref={profileCaptureRef} collapsable={false} style={{backgroundColor: '#000'}}>
+          <View style={styles.profileContainer}>
+            {/* Gear Icon at top right */}
+            <TouchableOpacity style={styles.gearButton}>
+              <IconSymbol size={24} name="gear" color="#fff" />
+            </TouchableOpacity>
 
-        {/* Profile Picture */}
-        <View style={styles.profilePictureContainer}>
-          <Image source={{ uri: userData.profile_picture }} style={styles.profilePicture} />
-        </View>
+            {/* Profile Picture */}
+            <View style={styles.profilePictureContainer}>
+              <Image source={{ uri: userData.profile_picture }} style={styles.profilePicture} />
+            </View>
 
-        {/* Name */}
-        <View style={styles.nameContainer}>
-          <Text style={styles.firstName}>{userData.firstName}</Text>
-          <Text style={styles.lastName}>{userData.lastName}</Text>
-        </View>
+            {/* Name */}
+            <View style={styles.nameContainer}>
+              <Text style={styles.firstName}>{userData.firstName}</Text>
+              <Text style={styles.lastName}>{userData.lastName}</Text>
+            </View>
 
-        {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.shareButton}>
-            <Text style={styles.shareButtonText}>Share Profile</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Action Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.editButton}>
+                <Text style={styles.editButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.shareButton} onPress={async () => {
+                try {
+                  const uri = await captureRef(profileCaptureRef, {
+                    format: 'png',
+                    quality: 1,
+                    backgroundColor: '#000', // Ensure black background when capturing
+                  });
+                  if (Platform.OS === 'web') {
+                    const link = document.createElement('a');
+                    link.href = uri;
+                    link.download = 'profile.png';
+                    link.click();
+                  } else {
+                    await Sharing.shareAsync(uri);
+                  }
+                } catch (e) {
+                  alert('Failed to share profile: ' + e);
+                }
+              }}>
+                <Text style={styles.shareButtonText}>Share Profile</Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* Date Joined and Mutuals */}
-        <View style={styles.infoContainer}>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Joined</Text>
-            <Text style={styles.infoValue}>{userData.dateJoined}</Text>
+            {/* Date Joined and Mutuals */}
+            <View style={styles.infoContainer}>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Joined</Text>
+                <Text style={styles.infoValue}>{userData.dateJoined}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Mutuals</Text>
+                <Text style={styles.infoValue}>{userData.mutuals}</Text>
+              </View>
+            </View>
+
+            {/* Bio Section */}
+            <View style={styles.bioContainer}>
+              <Text style={styles.bio}>{userData.bio}</Text>
+            </View>
           </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Mutuals</Text>
-            <Text style={styles.infoValue}>{userData.mutuals}</Text>
-          </View>
-        </View>
-
-        {/* Bio Section */}
-        <View style={styles.bioContainer}>
-          <Text style={styles.bio}>{userData.bio}</Text>
         </View>
 
         {/* Hot Take Questions */}
@@ -214,12 +238,16 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
   },
-  header: {
+  profileContainer: {
+    position: 'relative',
     width: '100%',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     marginBottom: 20,
   },
   gearButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
     padding: 10,
   },
   profilePictureContainer: {

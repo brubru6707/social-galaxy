@@ -1,4 +1,6 @@
 import { useUser } from '@/contexts/UserContext';
+import { useGrove } from '@/contexts/GroveContext';
+import GROVES from '@/assets/groves_data';
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import stickers from '../assets/stickers.json';
@@ -26,6 +28,7 @@ export type EventDetailsProps = {
 
 export default function EventDetails({ event }: EventDetailsProps) {
   const { currentUser, dailyQuestion, rsvpToEvent, endedEvents } = useUser();
+  const { canAccessEvent, isGroveMember } = useGrove();
   const isUserAttending = currentUser && currentUser.events_gone_to.includes(event.id);
   const [goingPressed, setGoingPressed] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
@@ -36,6 +39,21 @@ export default function EventDetails({ event }: EventDetailsProps) {
   // Check if this event has been ended by admin
   const eventResult = endedEvents[event.id];
   const eventEnded = !!eventResult;
+  
+  // Get groves this event belongs to
+  const getEventGroves = () => {
+    const title = (event.title || '').toLowerCase();
+    const description = (event.description || '').toLowerCase();
+    
+    return GROVES.filter(grove => 
+      grove.keywords.some(keyword => 
+        title.includes(keyword) || description.includes(keyword)
+      )
+    );
+  };
+  
+  const eventGroves = getEventGroves();
+  const access = canAccessEvent(event);
 
   // Show confetti when event results appear and user won
   useEffect(() => {
@@ -88,6 +106,45 @@ export default function EventDetails({ event }: EventDetailsProps) {
         <Image source={{ uri: event.event_picture }} style={styles.image} />
       )}
       <Text style={styles.title}>{event.title}</Text>
+      
+      {/* Grove Badges */}
+      {eventGroves.length > 0 && (
+        <View style={styles.groveBadgesRow}>
+          {eventGroves.map(grove => (
+            <View 
+              key={grove.id} 
+              style={[
+                styles.groveBadgeDetail,
+                { 
+                  backgroundColor: grove.color + '20',
+                  borderColor: isGroveMember(grove.id) ? grove.color : 'transparent'
+                }
+              ]}
+            >
+              <Text style={styles.groveBadgeEmoji}>{grove.emoji}</Text>
+              <Text style={[styles.groveBadgeText, { color: grove.color }]}>
+                {grove.name}
+              </Text>
+              {isGroveMember(grove.id) && (
+                <Text style={styles.memberCheck}>✓</Text>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
+      
+      {/* Access Restriction Notice */}
+      {!access.canAccess && access.requiredGrove && (
+        <View style={styles.accessRestriction}>
+          <Text style={styles.accessIcon}>🔒</Text>
+          <View>
+            <Text style={styles.accessTitle}>Grove-Exclusive Event</Text>
+            <Text style={styles.accessSubtitle}>
+              Join {access.requiredGrove.name} to RSVP
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Show user's answer/results under event name, like home page */}
       {(userAnswer || answered) && (
@@ -138,24 +195,33 @@ export default function EventDetails({ event }: EventDetailsProps) {
         <TouchableOpacity
           style={[
             styles.rsvpButton,
-            { backgroundColor: '#4CAF50' },
+            { backgroundColor: access.canAccess ? '#4CAF50' : '#4B5563' },
             (isUserAttending || goingPressed) && styles.selectedButton
           ]}
           onPress={handleGoingPress}
-          disabled={isUserAttending || goingPressed}
+          disabled={isUserAttending || goingPressed || !access.canAccess}
         >
-          <Text style={styles.rsvpButtonText}>Going</Text>
+          <Text style={styles.rsvpButtonText}>
+            {access.canAccess ? 'Going' : '🔒'}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[
-          styles.rsvpButton,
-          { backgroundColor: '#FF9800' }
-        ]}>
-          <Text style={styles.rsvpButtonText}>Maybe</Text>
+        <TouchableOpacity 
+          style={[
+            styles.rsvpButton,
+            { backgroundColor: access.canAccess ? '#FF9800' : '#4B5563' }
+          ]}
+          disabled={!access.canAccess}
+        >
+          <Text style={styles.rsvpButtonText}>
+            {access.canAccess ? 'Maybe' : '🔒'}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[
-          styles.rsvpButton,
-          { backgroundColor: '#F44336' }
-        ]}>
+        <TouchableOpacity 
+          style={[
+            styles.rsvpButton,
+            { backgroundColor: '#F44336' }
+          ]}
+        >
           <Text style={styles.rsvpButtonText}>Can't Go</Text>
         </TouchableOpacity>
       </View>
@@ -194,6 +260,59 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  groveBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  groveBadgeDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  groveBadgeEmoji: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  groveBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  memberCheck: {
+    fontSize: 10,
+    color: '#10B981',
+    marginLeft: 4,
+  },
+  accessRestriction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245,158,11,0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.3)',
+  },
+  accessIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  accessTitle: {
+    color: '#F59E0B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  accessSubtitle: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    marginTop: 2,
   },
   location: {
     fontSize: 18,

@@ -2,14 +2,17 @@ import DraggableStickerEmoji from '@/components/Profile/DraggableStickerEmoji';
 import ProfileInfo from '@/components/Profile/ProfileInfo';
 import ShareProfileCard from '@/components/ShareProfileCard';
 import { useUser } from '@/contexts/UserContext';
+import { useGrove } from '@/contexts/GroveContext';
 import React, { useRef, useState } from 'react';
-import { Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import stickersData from '../../assets/stickers.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
   const { currentUser } = useUser();
+  const { userGroves, activeGroveContext, setActiveGroveContext, getGroveProfile } = useGrove();
   const scrollViewRef = useRef<ScrollView>(null);
   const profileCaptureRef = useRef<View>(null);
   const rootCaptureRef = useRef<View>(null);
@@ -17,6 +20,10 @@ export default function ProfileScreen() {
   const [showShareCard, setShowShareCard] = useState(false);
   const gestureStartPositions = useRef<{[key: number]: {x: number, y: number}}>({});
   const emojiAnimValues = useRef<{[key: number]: {translateX: Animated.Value, translateY: Animated.Value, scale: Animated.Value}}>({});
+  
+  // Get grove-specific profile if in grove context
+  const groveProfile = activeGroveContext ? getGroveProfile(activeGroveContext) : null;
+  const activeGrove = userGroves.find(g => g.id === activeGroveContext);
 
   // Debug: log when emojiPositions changes
   React.useEffect(() => {
@@ -53,20 +60,26 @@ export default function ProfileScreen() {
     return emojiAnimValues.current[index];
   };
 
-  // Map currentUser data to the expected format
+  // Map currentUser data to the expected format, with grove overrides if in context
   const userData = {
     id: currentUser?.id || 'Unknown',
-    firstName: currentUser?.name || 'User',
+    firstName: groveProfile?.displayName || currentUser?.name || 'User',
     lastName: '',
-    profile_picture: currentUser?.profile_picture || "https://i.pravatar.cc/300?u='USER'",
+    profile_picture: groveProfile?.profilePicture || currentUser?.profile_picture || "https://i.pravatar.cc/300?u='USER'",
     dateJoined: currentUser?.dob || 'Unknown',
     mutuals: currentUser?.mutuals?.length || 0,
-    bio: currentUser?.bio || 'No bio available',
+    bio: groveProfile?.bio || currentUser?.bio || 'No bio available',
     hotTakes: currentUser?.hot_take_answers?.map((take: any) => ({
       question: take.question_text || 'Unknown question',
-      answer: take.answer ?? take.selected_option ?? 'No answer'
+      answer: take.answer ?? take.selected_option ?? 'No answer',
+      questionId: take.question_id,
     })) || [],
   };
+  
+  // Filter hot takes if in grove context
+  const filteredHotTakes = activeGroveContext && groveProfile?.visibleHotTakes
+    ? userData.hotTakes.filter((take: any) => groveProfile.visibleHotTakes.includes(take.questionId))
+    : userData.hotTakes;
 
 
   // Derive user stickers from hot take answers
@@ -90,13 +103,114 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Grove Context Selector */}
+        {userGroves.length > 0 && (
+          <View style={styles.groveContextSection}>
+            <Text style={styles.groveContextLabel}>Viewing as:</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.groveContextScroll}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.groveContextChip,
+                  !activeGroveContext && styles.groveContextChipActive
+                ]}
+                onPress={() => setActiveGroveContext(null)}
+              >
+                <Text style={[
+                  styles.groveContextChipText,
+                  !activeGroveContext && styles.groveContextChipTextActive
+                ]}>
+                  Full Profile
+                </Text>
+              </TouchableOpacity>
+              
+              {userGroves.map(grove => (
+                <TouchableOpacity
+                  key={grove.id}
+                  style={[
+                    styles.groveContextChip,
+                    activeGroveContext === grove.id && styles.groveContextChipActive,
+                    { borderColor: grove.color }
+                  ]}
+                  onPress={() => setActiveGroveContext(
+                    activeGroveContext === grove.id ? null : grove.id
+                  )}
+                >
+                  <Text style={styles.groveContextEmoji}>{grove.emoji}</Text>
+                  <Text style={[
+                    styles.groveContextChipText,
+                    activeGroveContext === grove.id && styles.groveContextChipTextActive
+                  ]}>
+                    {grove.name.replace(' Grove', '')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        
+        {/* Active Grove Context Banner */}
+        {activeGrove && (
+          <LinearGradient
+            colors={[activeGrove.color + '40', activeGrove.color + '10']}
+            style={styles.groveContextBanner}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Text style={styles.groveContextBannerEmoji}>{activeGrove.emoji}</Text>
+            <View style={styles.groveContextBannerInfo}>
+              <Text style={styles.groveContextBannerTitle}>
+                Viewing as {activeGrove.name} member
+              </Text>
+              <Text style={styles.groveContextBannerSubtitle}>
+                This is how other {activeGrove.name} members see your profile
+              </Text>
+            </View>
+          </LinearGradient>
+        )}
+        
         {/* Profile Info Section (modularized) */}
         <ProfileInfo userData={userData} onShare={handleShare} onEdit={handleEdit} />
+        
+        {/* Grove Badges */}
+        {userGroves.length > 0 && !activeGroveContext && (
+          <View style={styles.groveBadgesSection}>
+            <Text style={styles.groveBadgesSectionTitle}>My Groves</Text>
+            <View style={styles.groveBadgesRow}>
+              {userGroves.map(grove => (
+                <View 
+                  key={grove.id} 
+                  style={[styles.groveBadge, { backgroundColor: grove.color + '30' }]}
+                >
+                  <Text style={styles.groveBadgeEmoji}>{grove.emoji}</Text>
+                  <Text style={[styles.groveBadgeText, { color: grove.color }]}>
+                    {grove.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Hot Take Questions */}
         <View style={styles.hotTakesContainer}>
-          <Text style={styles.hotTakesTitle}>Hot Takes</Text>
-          {userData.hotTakes.map((take, index) => {
+          <Text style={styles.hotTakesTitle}>
+            {activeGroveContext ? `Hot Takes (${activeGrove?.name})` : 'Hot Takes'}
+          </Text>
+          {activeGroveContext && filteredHotTakes.length === 0 && (
+            <View style={styles.noHotTakesState}>
+              <Text style={styles.noHotTakesText}>
+                No hot takes selected for this grove
+              </Text>
+              <Text style={styles.noHotTakesSubtext}>
+                Edit your grove profile to choose which hot takes to show
+              </Text>
+            </View>
+          )}
+          {filteredHotTakes.map((take: any, index: number) => {
             const emojiAnim = getEmojiAnim(index);
             return (
               <View key={index} style={styles.hotTakeItem}>
@@ -143,6 +257,117 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     alignItems: 'center',
+  },
+  groveContextSection: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  groveContextLabel: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  groveContextScroll: {
+    gap: 8,
+  },
+  groveContextChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#1F2937',
+    borderWidth: 1,
+    borderColor: '#374151',
+    marginRight: 8,
+  },
+  groveContextChipActive: {
+    backgroundColor: '#fff',
+    borderColor: '#fff',
+  },
+  groveContextChipText: {
+    color: '#9CA3AF',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  groveContextChipTextActive: {
+    color: '#000',
+  },
+  groveContextEmoji: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  groveContextBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    width: '100%',
+  },
+  groveContextBannerEmoji: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  groveContextBannerInfo: {
+    flex: 1,
+  },
+  groveContextBannerTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  groveContextBannerSubtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  groveBadgesSection: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  groveBadgesSectionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  groveBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  groveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  groveBadgeEmoji: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  groveBadgeText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  noHotTakesState: {
+    backgroundColor: '#1F2937',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  noHotTakesText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  noHotTakesSubtext: {
+    color: '#6B7280',
+    fontSize: 12,
+    textAlign: 'center',
   },
   profileContainer: {
     position: 'relative',

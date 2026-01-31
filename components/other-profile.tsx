@@ -1,17 +1,65 @@
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import GROVES from '@/assets/groves_data';
 
-export default function OtherProfile({ user, onClose }: { user: any, onClose: () => void }) {
+interface OtherProfileProps {
+  user: any;
+  onClose: () => void;
+  groveContext?: string; // Optional grove context for filtered view
+}
+
+export default function OtherProfile({ user, onClose, groveContext }: OtherProfileProps) {
+  // Get groves this user belongs to
+  const userGroves = GROVES.filter(grove => grove.members.includes(user.id));
+  
+  // Get the active grove if in context
+  const activeGrove = groveContext ? GROVES.find(g => g.id === groveContext) : null;
+  
+  // Determine what to show based on grove context
+  const displayName = user.name;
+  const displayBio = user.bio;
+  const displayHotTakes = user.hot_take_answers || [];
+  
   return (
     <View style={styles.overlay}>
       <View style={styles.modal}>
         <ScrollView contentContainerStyle={styles.content}>
+          {/* Grove Context Banner */}
+          {activeGrove && (
+            <View style={[styles.groveContextBanner, { backgroundColor: activeGrove.color + '30' }]}>
+              <Text style={styles.groveContextEmoji}>{activeGrove.emoji}</Text>
+              <Text style={[styles.groveContextText, { color: activeGrove.color }]}>
+                {activeGrove.name} Profile
+              </Text>
+            </View>
+          )}
+          
           <Image source={{ uri: user.profile_picture }} style={styles.profileImage} />
-          <Text style={styles.name}>{user.name}</Text>
-          <Text style={styles.bio}>{user.bio}</Text>
-          <Text style={styles.sectionTitle}>Hot Takes</Text>
-          {user.hot_take_answers && user.hot_take_answers.length > 0 ? (
-            user.hot_take_answers.map((ht: any, idx: number) => (
+          <Text style={styles.name}>{displayName}</Text>
+          <Text style={styles.bio}>{displayBio}</Text>
+          
+          {/* Grove Badges */}
+          {userGroves.length > 0 && !groveContext && (
+            <View style={styles.groveBadgesContainer}>
+              {userGroves.map(grove => (
+                <View 
+                  key={grove.id} 
+                  style={[styles.groveBadge, { backgroundColor: grove.color + '30' }]}
+                >
+                  <Text style={styles.groveBadgeEmoji}>{grove.emoji}</Text>
+                  <Text style={[styles.groveBadgeText, { color: grove.color }]}>
+                    {grove.name.replace(' Grove', '')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+          
+          <Text style={styles.sectionTitle}>
+            {groveContext ? `Hot Takes` : 'Hot Takes'}
+          </Text>
+          {displayHotTakes.length > 0 ? (
+            displayHotTakes.map((ht: any, idx: number) => (
               <View key={idx} style={styles.hotTake}>
                 <Text style={styles.question}>{ht.question_text}</Text>
                 <Text style={styles.answer}>{ht.selected_option || ht.answer}</Text>
@@ -20,9 +68,10 @@ export default function OtherProfile({ user, onClose }: { user: any, onClose: ()
           ) : (
             <Text style={styles.empty}>No hot takes found.</Text>
           )}
+          
           <Text style={styles.sectionTitle}>Recent Events</Text>
           {user.events_gone_to && user.events_gone_to.length > 0 ? (
-            user.events_gone_to.map((evt: any, idx: number) => (
+            user.events_gone_to.slice(0, 3).map((evt: any, idx: number) => (
               <View key={idx} style={styles.eventCard}>
                 <Image source={{ uri: evt.event_picture }} style={styles.eventImage} />
                 <View style={{ flex: 1 }}>
@@ -35,7 +84,9 @@ export default function OtherProfile({ user, onClose }: { user: any, onClose: ()
             <Text style={styles.empty}>No recent events found.</Text>
           )}
         </ScrollView>
-        <Text style={styles.closeButton} onPress={onClose}>Close</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Text style={styles.closeButton}>Close</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -64,6 +115,45 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     paddingBottom: 30,
+  },
+  groveContextBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  groveContextEmoji: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  groveContextText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  groveBadgesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  groveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  groveBadgeEmoji: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  groveBadgeText: {
+    fontSize: 11,
+    fontWeight: '500',
   },
   profileImage: {
     width: 100,

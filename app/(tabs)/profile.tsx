@@ -53,13 +53,20 @@ export default function ProfileScreen() {
     return emojiAnimValues.current[index];
   };
 
+  // Function to format the joined date
+  const formatJoinedDate = (dateString: string) => {
+    if (!dateString || dateString === 'Unknown') return 'Unknown';
+    const date = new Date(dateString);
+    return `${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+  };
+
   // Map currentUser data to the expected format
   const userData = {
     id: currentUser?.id || 'Unknown',
     firstName: currentUser?.name || 'User',
     lastName: '',
     profile_picture: currentUser?.profile_picture || "https://i.pravatar.cc/300?u='USER'",
-    dateJoined: currentUser?.dob || 'Unknown',
+    dateJoined: formatJoinedDate(currentUser?.joined) || 'Unknown',
     mutuals: currentUser?.mutuals?.length || 0,
     bio: currentUser?.bio || 'No bio available',
     hotTakes: currentUser?.hot_take_answers?.map((take: any) => ({

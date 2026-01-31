@@ -61,8 +61,6 @@ export default function HomeScreen() {
   const currentUserData = mockData.users.find(u => u.id === currentUserId);
   const userEventIds = currentUserData?.events_gone_to?.map(e => e.id) || [];
   const recentEvents = allEvents.filter(e => userEventIds.includes(e.id));
-  console.log("Recent Events for user:", recentEvents, userEventIds);
-
   const { currentUser, dailyQuestion, addVote, showResults, setShowResults, votes, finalResults } = useUser();
   // Use shared final results from UserContext instead of local state
   const finalLeftPercent = finalResults?.leftPercent || 0;

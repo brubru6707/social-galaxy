@@ -10,7 +10,7 @@ NUM_HOT_TAKES = 80
 
 # --- PROBABILITIES ---
 IDENTITY_CATEGORY_CHANCE = 0.15 
-WEIGHT_BOOST = 15            
+WEIGHT_BOOST = 5            
 MAX_WEIGHT = 80              
 MIN_WEIGHT = 5               
 
@@ -140,9 +140,14 @@ def normalize_weights(weights: Dict[str, float]) -> Dict[str, float]:
     return {k: (v / total) * 100 for k, v in weights.items()}
 
 def get_initial_weights() -> Dict[str, float]:
-    keys = list(TOPIC_CATEGORIES.keys())
-    val = 100.0 / len(keys)
-    return {k: val for k in keys}
+    base_categories = list(TOPIC_CATEGORIES.keys())
+    # Identity gets 10%, others share the remaining 90% equally
+    identity_weight = 10.0
+    remaining_weight = 90.0
+    other_weight = remaining_weight / len(base_categories)
+    weights = {cat: other_weight for cat in base_categories}
+    weights["identity"] = identity_weight
+    return weights
 
 def update_category_weights(current_weights: Dict[str, float], target_category: str) -> Dict[str, float]:
     """
@@ -272,7 +277,7 @@ def generate_users(hot_takes, events):
         user_answers = []
         answered_ids = set()
 
-        num_questions = random.randint(15, 25)
+        num_questions = 5 if i == 0 else random.randint(15, 25)
         
         for _ in range(num_questions):
             # 1. DECIDE: Identity or Regular?
@@ -333,6 +338,15 @@ def generate_users(hot_takes, events):
                 user_events.append(evt)
                 evt["attendees"].append(f"u_{i}")
 
+        # Generate mutuals list
+        num_mutuals = 9 if i == 0 else random.randint(0, 10)
+        mutuals_list = []
+        for _ in range(num_mutuals):
+            j = random.randint(0, NUM_USERS - 1)
+            while j == i or f"u_{j}" in mutuals_list:
+                j = random.randint(0, NUM_USERS - 1)
+            mutuals_list.append(f"u_{j}")
+
         users.append({
             "id": f"u_{i}",
             "name": user_name,
@@ -340,7 +354,9 @@ def generate_users(hot_takes, events):
             "profile_picture": f"https://robohash.org/{user_name}.png",
             "preferences": user_weights,
             "hot_take_answers": user_answers,
-            "events_gone_to": user_events
+            "events_gone_to": user_events,
+            "mutuals": mutuals_list,
+            "joined": get_date(days_offset=random.randint(-365, 0))
         })
         
     return users

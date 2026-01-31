@@ -20,6 +20,7 @@ interface UserContextType {
   setCurrentUser: (user: User | null) => void;
   dailyQuestion: { question: string; left: string; right: string } | null;
   votes: { left: number; right: number };
+  finalResults: { leftPercent: number; rightPercent: number } | null;
   setDailyQuestion: (q: { question: string; left: string; right: string } | null) => void;
   addVote: (side: 'left' | 'right') => void;
   endDay: () => void;
@@ -54,6 +55,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [showResults, setShowResults] = useState(false);
   const [endedEvents, setEndedEvents] = useState<Record<string, { leftPercent: number; rightPercent: number }>>({});
   const [userVote, setUserVote] = useState<'left' | 'right' | null>(null);
+  const [finalResults, setFinalResults] = useState<{ leftPercent: number; rightPercent: number } | null>(null);
 
   // Setup notifications
   useEffect(() => {
@@ -82,6 +84,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Generate mock percentages for now
     const left = Math.floor(Math.random() * 100);
     const right = 100 - left;
+    console.log(`Ending event ${eventId} with results: Left ${left}%, Right ${right}%`);
     setEndedEvents(prev => ({
       ...prev,
       [eventId]: { leftPercent: left, rightPercent: right }
@@ -89,16 +92,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const endDay = async () => {
+    // Generate random final results
+    const leftVotes = Math.floor(Math.random() * 1000) + 100;
+    const rightVotes = Math.floor(Math.random() * 1000) + 100;
+    const totalVotes = leftVotes + rightVotes;
+    const leftPercent = Math.round((leftVotes / totalVotes) * 100);
+    const rightPercent = 100 - leftPercent;
+    
+    setFinalResults({ leftPercent, rightPercent });
     setShowResults(true);
     
     // Send notification to user about results
     if (userVote && dailyQuestion) {
-      const total = votes.left + votes.right;
-      const leftPercent = total > 0 ? Math.round((votes.left / total) * 100) : 0;
-      const rightPercent = 100 - leftPercent;
-      
-      const userWon = (userVote === 'left' && leftPercent >= 50) || (userVote === 'right' && rightPercent >= 50);
-      const winningOption = leftPercent >= 50 ? dailyQuestion.left : dailyQuestion.right;
+      // User wins if they voted for the side with MORE votes (majority)
+      const userWon = (userVote === 'left' && leftVotes > rightVotes) || (userVote === 'right' && rightVotes > leftVotes);
+      console.log('User won:', userVote, leftVotes, rightVotes, '=>', userWon, leftPercent, rightPercent);
+      const winningOption = leftVotes > rightVotes ? dailyQuestion.left : dailyQuestion.right;
       
       let title, body;
       if (userWon) {
@@ -114,7 +123,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const messages = [
           `rip you took the L 💀`,
           `yeah... you lost this one chief 😬`,
-          `oof that didn't age well 💩`,
+          `oof that didn't age well... 😅`,
           `L + ratio my guy 🤡`,
         ];
         title = messages[Math.floor(Math.random() * messages.length)];
@@ -134,6 +143,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const newDay = () => {
     setShowResults(false);
+    setFinalResults(null);
     // Show percentages (handled in admin), then pick new question
     // For now, cycle through some questions
     const questions = [
@@ -200,7 +210,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent }}>
+    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, finalResults, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent }}>
       {children}
     </UserContext.Provider>
   );

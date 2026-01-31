@@ -1,138 +1,325 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Animated,
+    Dimensions,
+    Easing,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+
+// --- Configuration ---
+const { width, height } = Dimensions.get('window');
+const PARTY_EMOJIS = ['🍷', '🍺', '🍸', '🎵', '🎸', '🪩', '🥂'];
+const SAD_EMOJIS = ['😢', '😭', '😔', '😞', '💔', '😿'];
+const NUM_FALLING_EMOJIS = 15;
+
+// --- Helper Component: Single Falling Emoji ---
+const FallingEmoji = ({ delay, userWon }: { delay: number; userWon: boolean }) => {
+  // Random start X position
+  const startX = Math.random() * (width - 40); 
+  const animVal = useRef(new Animated.Value(-50)).current;
+  const emojiList = userWon ? PARTY_EMOJIS : SAD_EMOJIS;
+  const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+
+  useEffect(() => {
+    // Create a looping falling animation
+    const runAnimation = () => {
+      animVal.setValue(-50); // Reset to top
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(animVal, {
+          toValue: height + 50, // Fall past bottom
+          duration: 3000 + Math.random() * 2000, // Random speed
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ]).start((result) => {
+        if (result.finished) {
+          runAnimation(); // Loop
+        }
+      });
+    };
+
+    runAnimation();
+  }, [animVal, delay]);
+
+  return (
+    <Animated.Text
+      style={{
+        position: 'absolute',
+        left: startX,
+        top: 0,
+        fontSize: 30,
+        transform: [{ translateY: animVal }],
+        zIndex: 0, // Behind the main content
+      }}
+    >
+      {emoji}
+    </Animated.Text>
+  );
+};
+
+// --- Main Component ---
 
 type HotTakeResultsProps = {
-  leftOption: string;
-  rightOption: string;
+  leftOption: string; // e.g., "The Bar"
+  rightOption: string; // e.g., "Dance Floor"
   leftPercent: number;
   rightPercent: number;
   animate?: boolean;
   showWrapper?: boolean;
+  onClose?: () => void;
+  userWon?: boolean;
 };
 
 export default function HotTakeResults({ 
-  leftOption, 
-  rightOption, 
+  leftOption = "THE BAR", 
+  rightOption = "DANCE FLOOR", 
   leftPercent, 
   rightPercent,
   animate = true,
-  showWrapper = false
+  onClose,
+  userWon = true,
 }: HotTakeResultsProps) {
-  const leftAnim = useRef(new Animated.Value(0)).current;
-  const rightAnim = useRef(new Animated.Value(0)).current;
+  
+  // Determine winner for styling highlights
+  const isLeftWinner = leftPercent >= rightPercent;
+
+  // Animation for the numbers (counting up)
+  const [displayLeft, setDisplayLeft] = useState(0);
+  const [displayRight, setDisplayRight] = useState(0);
+  const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (animate && leftPercent > 0) {
-      Animated.parallel([
-        Animated.timing(leftAnim, {
-          toValue: leftPercent,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-        Animated.timing(rightAnim, {
-          toValue: rightPercent,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-      ]).start();
+    if (animate) {
+      Animated.timing(animValue, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: false, // False because we are listening to value changes
+        easing: Easing.out(Easing.exp),
+      }).start();
+
+      // Listener to update state numbers
+      const listener = animValue.addListener(({ value }) => {
+        setDisplayLeft(Math.floor(value * leftPercent));
+        setDisplayRight(Math.floor(value * rightPercent));
+      });
+
+      return () => animValue.removeListener(listener);
     } else {
-      leftAnim.setValue(leftPercent);
-      rightAnim.setValue(rightPercent);
+      setDisplayLeft(leftPercent);
+      setDisplayRight(rightPercent);
     }
-  }, [leftPercent, rightPercent, animate, leftAnim, rightAnim]);
+  }, [leftPercent, rightPercent, animate]);
 
   return (
-    <View style={showWrapper ? styles.wrapper : styles.progressContainer}>
-      <View style={styles.progressContainer}>
-        <View style={styles.percentageContainer}>
-          <Text style={styles.percentageText}>{leftPercent}%</Text>
-          <Text style={styles.percentageText}>{rightPercent}%</Text>
+    <SafeAreaView style={styles.container}>
+      {/* 1. Falling Emojis Background Layer */}
+      <View style={styles.emojiLayer} pointerEvents="none">
+        {Array.from({ length: NUM_FALLING_EMOJIS }).map((_, i) => (
+          <FallingEmoji key={i} delay={i * 800} userWon={userWon} />
+        ))}
+      </View>
+
+      {/* 2. Header "Pulse Results" */}
+      <View style={styles.header}>
+        <View style={styles.pillContainer}>
+          <Text style={styles.pillText}>{userWon ? 'YOU ARE IN THE MAJORITY!' : 'YOU ARE IN THE MINORITY!'}</Text>
         </View>
-        <View style={styles.barContainer}>
-        <Animated.View 
-          style={[
-            styles.leftBar, 
-            { 
-              width: leftAnim.interpolate({ 
-                inputRange: [0, 100], 
-                outputRange: ['0%', '100%'] 
-              }) 
-            }
-          ]}
-        >
-          <Text style={styles.barText}>{leftOption}</Text>
-        </Animated.View>
-        <Animated.View 
-          style={[
-            styles.rightBar, 
-            { 
-              width: rightAnim.interpolate({ 
-                inputRange: [0, 100], 
-                outputRange: ['0%', '100%'] 
-              }) 
-            }
-          ]}
-        >
-          <Text style={styles.barText}>{rightOption}</Text>
-        </Animated.View>
       </View>
+
+      {/* 3. Main Split Content */}
+      <View style={styles.splitWrapper}>
+        
+        {/* LEFT SIDE (Cyan) */}
+        <View style={[
+            styles.sideContainer, 
+            styles.leftBorder, 
+            { opacity: isLeftWinner ? 1 : 0.5, flex: isLeftWinner ? 1.5 : 0.5 } // Dim loser slightly
+        ]}>
+          {/* Neon "O" */}
+          <Text style={[styles.bigIcon, styles.cyanText, styles.cyanGlow]}>O</Text>
+          
+          {/* Percentage */}
+          <Text style={[styles.percentText, styles.cyanText, styles.cyanGlow]}>
+            {displayLeft}%
+          </Text>
+          
+          {/* Label */}
+          <Text style={styles.labelText}>
+            {leftOption.toUpperCase()}
+          </Text>
+        </View>
+
+        {/* Vertical Divider Line */}
+        <View style={styles.divider} />
+
+        {/* RIGHT SIDE (Purple) */}
+        <View style={[
+            styles.sideContainer, 
+            styles.rightBorder,
+            { opacity: !isLeftWinner ? 1 : 0.6, flex: !isLeftWinner ? 1.5 : 0.5 } // Dim loser slightly
+        ]}>
+          {/* Neon "X" */}
+          <Text style={[styles.bigIcon, styles.purpleText, styles.purpleGlow]}>X</Text>
+          
+          {/* Percentage */}
+          <Text style={[styles.percentText, styles.purpleText, styles.purpleGlow]}>
+            {displayRight}%
+          </Text>
+          
+          {/* Label */}
+          <Text style={styles.labelText}>
+            {rightOption.toUpperCase()}
+          </Text>
+        </View>
       </View>
-    </View>
+
+      {/* 4. Bottom Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.button} onPress={onClose}>
+          <Text style={styles.buttonText}>CLAIM YOUR STAMP →</Text>
+        </TouchableOpacity>
+        <Text style={styles.timerText}>NEXT PULSE IN 04:59</Text>
+      </View>
+
+    </SafeAreaView>
   );
 }
 
+// --- Styles ---
 const styles = StyleSheet.create({
-  wrapper: {
-    width: '100%',
-    borderWidth: 2,
-    borderColor: '#FFD700',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  progressContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#120521', // Dark deep purple/black background
     alignItems: 'center',
-    width: '100%',
-  },
-  percentageContainer: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 8,
+    paddingVertical: 20,
   },
-  percentageText: {
-    color: '#FFD700',
-    fontSize: 16,
+  emojiLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  header: {
+    zIndex: 10,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  pillContainer: {
+    backgroundColor: '#2a2a4a',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  pillText: {
+    color: '#00f2ff', // Cyan text
     fontWeight: 'bold',
+    letterSpacing: 1,
+    fontSize: 12,
   },
-  barContainer: {
-    position: 'relative',
-    height: 30,
+  splitWrapper: {
+    flexDirection: 'row',
     width: '100%',
-    backgroundColor: '#333',
-    borderRadius: 10,
+    height: '50%', // Occupy middle half of screen
+    marginTop: 20,
+    zIndex: 1, // Above emojis
   },
-  leftBar: {
-    position: 'absolute',
-    left: 0,
-    height: '100%',
-    backgroundColor: '#FF5CB3',
-    borderRadius: 10,
-    justifyContent: 'center',
+  sideContainer: {
+    flex: 1,
     alignItems: 'center',
-  },
-  rightBar: {
-    position: 'absolute',
-    right: 0,
-    height: '100%',
-    backgroundColor: '#4455aa',
-    borderRadius: 10,
     justifyContent: 'center',
-    alignItems: 'center',
+    padding: 10,
   },
-  barText: {
+  leftBorder: {
+    borderWidth: 2,
+    borderColor: '#00f2ff', // Cyan Border box for Left side
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 242, 255, 0.05)', // Very faint background tint
+  },
+  rightBorder: {
+    borderWidth: 2,
+    borderColor: '#bd00ff', // Purple Border box for Right side
+    borderRadius: 4,
+    backgroundColor: 'rgba(189, 0, 255, 0.05)', // Very faint background tint
+  },
+  divider: {
+    width: 1,
+    backgroundColor: '#444',
+    height: '100%',
+  },
+  // Typography Styles
+  bigIcon: {
+    fontSize: 100,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+  percentText: {
+    fontSize: 60,
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+    marginBottom: 20,
+  },
+  labelText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'center',
+    letterSpacing: 2,
+    lineHeight: 24,
   },
+  // Colors & Glows
+  cyanText: {
+    color: '#00f2ff',
+  },
+  cyanGlow: {
+    textShadowColor: '#00f2ff',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 5,
+  },
+  purpleText: {
+    color: '#bd00ff',
+  },
+  purpleGlow: {
+    textShadowColor: '#bd00ff',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 5,
+  },
+  // Footer
+  footer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 10,
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#bd00ff', // Bright purple button
+    width: '100%',
+    paddingVertical: 18,
+    borderRadius: 15,
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#bd00ff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 1,
+  },
+  timerText: {
+    color: '#666',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  }
 });

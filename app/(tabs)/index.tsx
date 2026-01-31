@@ -62,10 +62,10 @@ export default function HomeScreen() {
   const userEventIds = currentUserData?.events_gone_to?.map(e => e.id) || [];
   const recentEvents = allEvents.filter(e => userEventIds.includes(e.id));
 
-  const { currentUser, dailyQuestion, addVote, showResults, setShowResults, votes } = useUser();
-  // Fake random results - only calculated once when results are shown
-  const [finalLeftPercent, setFinalLeftPercent] = useState(0);
-  const [finalRightPercent, setFinalRightPercent] = useState(0);
+  const { currentUser, dailyQuestion, addVote, showResults, setShowResults, votes, finalResults } = useUser();
+  // Use shared final results from UserContext instead of local state
+  const finalLeftPercent = finalResults?.leftPercent || 0;
+  const finalRightPercent = finalResults?.rightPercent || 0;
   const leftAnim = useRef(new Animated.Value(0)).current;
   const rightAnim = useRef(new Animated.Value(0)).current;
   const [showModal, setShowModal] = useState(true);
@@ -82,8 +82,6 @@ export default function HomeScreen() {
   // Reset percentages and animations when results are hidden
   useEffect(() => {
     if (!showResults) {
-      setFinalLeftPercent(0);
-      setFinalRightPercent(0);
       leftAnim.setValue(0);
       rightAnim.setValue(0);
       setShowConfetti(false);
@@ -99,29 +97,16 @@ export default function HomeScreen() {
     }
   }, [dailyQuestion, answeredHotTake]);
 
-  // Set final percentages once when results are shown
   useEffect(() => {
-    if (showResults && answeredHotTake && finalLeftPercent === 0) {
-      const leftVotes = Math.floor(Math.random() * 1000) + 100;
-      const rightVotes = Math.floor(Math.random() * 1000) + 100;
-      const totalVotes = leftVotes + rightVotes;
-      const leftPercent = Math.round((leftVotes / totalVotes) * 100);
-      const rightPercent = 100 - leftPercent;
-      setFinalLeftPercent(leftPercent);
-      setFinalRightPercent(rightPercent);
-    }
-  }, [showResults, answeredHotTake, finalLeftPercent]);
-
-  useEffect(() => {
-    if (answeredHotTake && showResults && finalLeftPercent > 0) {
+    if (answeredHotTake && showResults && finalResults) {
       Animated.parallel([
         Animated.timing(leftAnim, {
-          toValue: finalLeftPercent,
+          toValue: finalResults.leftPercent,
           duration: 2000,
           useNativeDriver: false,
         }),
         Animated.timing(rightAnim, {
-          toValue: finalRightPercent,
+          toValue: finalResults.rightPercent,
           duration: 2000,
           useNativeDriver: false,
         }),
@@ -131,14 +116,14 @@ export default function HomeScreen() {
         setTimeout(() => setShowConfetti(false), 4000);
       });
     }
-  }, [answeredHotTake, showResults, leftAnim, rightAnim, finalLeftPercent, finalRightPercent]);
+  }, [answeredHotTake, showResults, leftAnim, rightAnim, finalResults]);
 
   // Determine winning emoji for confetti
   const getWinningEmoji = () => {
-    if (!userAnswer || finalLeftPercent === 0) return undefined;
+    if (!userAnswer || !finalResults) return undefined;
     
-    const userWon = (userAnswer === 'left' && finalLeftPercent >= 50) || 
-                     (userAnswer === 'right' && finalRightPercent >= 50);
+    const userWon = (userAnswer === 'left' && finalResults.leftPercent >= 50) || 
+                     (userAnswer === 'right' && finalResults.rightPercent >= 50);
     
     if (!userWon) return undefined;
     
@@ -321,6 +306,23 @@ export default function HomeScreen() {
           }}
           onClose={() => setShowModal(false)}
         />
+        {/* Hot Take Results Modal */}
+        {(() => {
+          const userWon = userAnswer ? (userAnswer === 'left' ? (finalResults?.leftPercent || 0) >= (finalResults?.rightPercent || 0) : (finalResults?.rightPercent || 0) >= (finalResults?.leftPercent || 0)) : true;
+          return showResults && finalResults && (
+            <Modal visible={true} transparent={false} animationType="fade" onRequestClose={() => setShowResults(false)}>
+              <HotTakeResults
+                leftOption={option1}
+                rightOption={option2}
+                leftPercent={finalResults.leftPercent}
+                rightPercent={finalResults.rightPercent}
+                animate={true}
+                onClose={() => setShowResults(false)}
+                userWon={userWon}
+              />
+            </Modal>
+          );
+        })()}
         <SafeAreaView style={styles.container}>
           {/* Animated Liquid Gradient Background */}
           <AnimatedLiquidGradient />
@@ -328,28 +330,18 @@ export default function HomeScreen() {
             {/* Fun Header */}
             <View style={styles.headerWrap}>
               <Text style={styles.logo}>partiful</Text>
-              {answeredHotTake && (
+              {answeredHotTake && !showResults && (
                 <View style={styles.hotTakeHeaderWrap}>
-                  {showResults ? (
-                    <HotTakeResults
-                      leftOption={option1}
-                      rightOption={option2}
-                      leftPercent={finalLeftPercent}
-                      rightPercent={finalRightPercent}
-                      animate={true}
-                    />
-                  ) : (
-                    <View style={styles.questionContainer}>
-                      <Text style={styles.questionText}>{questionText}</Text>
-                      <View style={styles.optionsRow}>
-                        <Text style={[styles.optionText, styles.leftOption]}>{option1}</Text>
-                        <View style={styles.vsContainer}>
-                          <Text style={styles.vsText}>vs</Text>
-                        </View>
-                        <Text style={[styles.optionText, styles.rightOption]}>{option2}</Text>
+                  <View style={styles.questionContainer}>
+                    <Text style={styles.questionText}>{questionText}</Text>
+                    <View style={styles.optionsRow}>
+                      <Text style={[styles.optionText, styles.leftOption]}>{option1}</Text>
+                      <View style={styles.vsContainer}>
+                        <Text style={styles.vsText}>vs</Text>
                       </View>
+                      <Text style={[styles.optionText, styles.rightOption]}>{option2}</Text>
                     </View>
-                  )}
+                  </View>
                 </View>
               )}
               <Text style={styles.greeting}>Hey, {currentUser?.name || 'Party Person'}! 🎉</Text>

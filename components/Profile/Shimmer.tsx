@@ -1,73 +1,75 @@
+import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 type ShimmerProps = {
   emoji: string;
   size?: number;
-  style?: any;
 };
 
-export default function ShimmerNoMask({ emoji, size = 80, style }: ShimmerProps) {
-  const shimmerAnim = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
+export default function EmojiShimmer({ emoji, size = 80 }: ShimmerProps) {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  console.log('[DEBUG] Rendering EmojiShimmer for', emoji, 'with size', size);
+  useEffect(() => {
     Animated.loop(
-      Animated.timing(shimmerAnim, {
+      Animated.timing(animatedValue, {
         toValue: 1,
-        duration: 2000,
-        easing: Easing.linear, // Smooth continuous movement
+        duration: 1200, // Faster loop to verify it works
+        easing: Easing.linear,
         useNativeDriver: true,
       })
     ).start();
-  }, [shimmerAnim]);
+  }, [animatedValue]);
 
-  // Move the beam from far left to far right
-  const translateX = shimmerAnim.interpolate({
+  const translateX = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [-size * 1.5, size * 1.5], 
+    outputRange: [-size, size], // Moves beam from left to right
   });
 
   return (
-    <View style={[styles.container, style, { width: size, height: size }]}>
-      {/* 1. The Emoji */}
-      <Text style={[styles.emoji, { fontSize: size, lineHeight: size }]}>
-        {emoji}
-      </Text>
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      
+      {/* LAYER 1: The Base Emoji (Always visible) */}
+      <Text style={{ fontSize: size }}>{emoji}</Text>
 
-      {/* 2. The "Spotlight" Beam Overlay */}
-      {/* We use overflow: 'hidden' on the container to keep the beam inside the box */}
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFill,
-          { 
-            transform: [{ translateX }],
-            opacity: 0.5 // Keep it subtle so it doesn't block the emoji
-          },
-        ]}
+      {/* LAYER 2: The Shimmer Overlay */}
+      <MaskedView
+        style={StyleSheet.absoluteFill}
+        maskElement={
+          <View style={styles.maskContainer}>
+            <Text style={{ fontSize: size }}>{emoji}</Text>
+          </View>
+        }
       >
-        <LinearGradient
-          // A softer, wider white beam
-          colors={['transparent', 'white', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }} // Horizontal swipe
-          style={{ flex: 1, width: '50%' }} // Beam is 50% width of container
-        />
-      </Animated.View>
+        {/* The Moving Beam */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { transform: [{ translateX }] }
+          ]}
+        >
+          <LinearGradient
+            colors={[
+              'transparent', 
+              'rgba(255, 255, 255, 0.8)', // High visibility white
+              'transparent'
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ flex: 1 }}
+          />
+        </Animated.View>
+      </MaskedView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    overflow: 'hidden', // Essential: cuts off the beam when it leaves the box
+  maskContainer: {
+    flex: 1,
+    backgroundColor: 'transparent', // Crucial for the mask to work
     justifyContent: 'center',
     alignItems: 'center',
-    // Optional: rounds the spotlight edges if you want a circular "coin" look
-    // borderRadius: 999, 
-  },
-  emoji: {
-    textAlign: 'center',
-    textAlignVertical: 'center',
   },
 });

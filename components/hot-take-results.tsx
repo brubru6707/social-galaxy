@@ -1,13 +1,14 @@
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Easing,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  Easing,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 // --- Configuration ---
@@ -73,6 +74,7 @@ type HotTakeResultsProps = {
   showWrapper?: boolean;
   onClose?: () => void;
   userWon?: boolean;
+  userChoice?: 'left' | 'right';
 };
 
 export default function HotTakeResults({ 
@@ -83,7 +85,10 @@ export default function HotTakeResults({
   animate = true,
   onClose,
   userWon = true,
+  userChoice,
 }: HotTakeResultsProps) {
+  
+  const router = useRouter();
   
   // Determine winner for styling highlights
   const isLeftWinner = leftPercent >= rightPercent;
@@ -180,10 +185,31 @@ export default function HotTakeResults({
 
       {/* 4. Bottom Button */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.button} onPress={onClose}>
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={() => {
+            if (userChoice) {
+              // Close the current modal first, then navigate
+              onClose?.();
+              // Small delay to ensure modal closes before navigation
+              setTimeout(() => {
+                const params = new URLSearchParams({
+                  userChoice,
+                  leftOption,
+                  rightOption,
+                  leftPercent: leftPercent.toString(),
+                  rightPercent: rightPercent.toString(),
+                  userWon: userWon.toString(),
+                });
+                router.push(`/claim-stamp?${params.toString()}`);
+              }, 100);
+            } else {
+              onClose?.();
+            }
+          }}
+        >
           <Text style={styles.buttonText}>CLAIM YOUR STAMP →</Text>
         </TouchableOpacity>
-        <Text style={styles.timerText}>NEXT PULSE IN 04:59</Text>
       </View>
 
     </SafeAreaView>

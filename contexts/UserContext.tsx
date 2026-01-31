@@ -1,5 +1,5 @@
-import * as Notifications from 'expo-notifications';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 
 // Define the User type based on your mock_data.json
 export interface User {
@@ -57,22 +57,29 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userVote, setUserVote] = useState<'left' | 'right' | null>(null);
   const [finalResults, setFinalResults] = useState<{ leftPercent: number; rightPercent: number } | null>(null);
 
-  // Setup notifications
+  // Setup notifications (only on native platforms)
   useEffect(() => {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    });
+    if (Platform.OS !== 'web') {
+      // Dynamic import ensures the web-server doesn't touch this code
+      const setupNotifications = async () => {
+        const Notifications = await import('expo-notifications');
 
-    (async () => {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Notification permissions not granted');
-      }
-    })();
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowBanner: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+          }),
+        });
+
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Notification permissions not granted');
+        }
+      };
+
+      setupNotifications();
+    }
   }, []);
 
   const addVote = (side: 'left' | 'right') => {
@@ -102,8 +109,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFinalResults({ leftPercent, rightPercent });
     setShowResults(true);
     
-    // Send notification to user about results
-    if (userVote && dailyQuestion) {
+    // Send notification to user about results (only on native platforms)
+    if (Platform.OS !== 'web' && userVote && dailyQuestion) {
+      // Dynamically import here as well
+      const Notifications = await import('expo-notifications');
+      
       // User wins if they voted for the side with MORE votes (majority)
       const userWon = (userVote === 'left' && leftVotes > rightVotes) || (userVote === 'right' && rightVotes > leftVotes);
       console.log('User won:', userVote, leftVotes, rightVotes, '=>', userWon, leftPercent, rightPercent);

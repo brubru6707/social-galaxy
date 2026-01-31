@@ -319,6 +319,7 @@ export default function HomeScreen() {
                 animate={true}
                 onClose={() => setShowResults(false)}
                 userWon={userWon}
+                userChoice={userAnswer}
               />
             </Modal>
           );

@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.brubru6707.social-galaxy"
+      "bundleIdentifier": "com.brubru6707.social-galaxy",
+      "deploymentTarget": "16.0"
     },
     "android": {
       "adaptiveIcon": {

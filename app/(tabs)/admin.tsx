@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 import { useUser } from '../../contexts/UserContext';
 
 export default function AdminScreen() {
@@ -29,6 +30,7 @@ export default function AdminScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AnimatedLiquidGradient />
       <Text style={styles.title}>Admin Portal</Text>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current Day</Text>

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 
 export default function NewEventScreen() {
   const [eventData, setEventData] = useState({
@@ -53,6 +54,7 @@ export default function NewEventScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AnimatedLiquidGradient />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Create New Event</Text>
 

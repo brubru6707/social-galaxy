@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Galaxy - Showcase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .showcase-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            opacity: 0.95;
+            margin-bottom: 30px;
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .cta-button {
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .cta-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .cta-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .cta-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+        }
+
+        /* Phone Gallery */
+        .phone-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-bottom: 60px;
+            animation: fadeInUp 1s ease-out 0.6s both;
+        }
+
+        /* Main Interactive Demo */
+        .main-demo {
+            margin-bottom: 60px;
+            animation: fadeInUp 1s ease-out 0.8s both;
+        }
+
+        .demo-label {
+            text-align: center;
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+
+        /* Phone mockup container */
+        .phone-mockup {
+            position: relative;
+            width: 375px;
+            height: 812px;
+            margin: 0 auto;
+            background: #1a1a1a;
+            border-radius: 50px;
+            padding: 15px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+            border: 3px solid #2a2a2a;
+            transition: transform 0.3s ease;
+        }
+
+        .phone-mockup:hover {
+            transform: scale(1.02);
+        }
+
+        /* Phone notch */
+        .phone-notch {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background: #1a1a1a;
+            border-radius: 0 0 20px 20px;
+            z-index: 10;
+        }
+
+        /* Phone screen */
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Iframe container for the app */
+        .app-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
+        /* Static screenshot mockup */
+        .phone-screen img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .screenshot-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Home indicator (iOS style bottom bar) */
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 135px;
+            height: 5px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 100px;
+            z-index: 10;
+        }
+
+        /* Loading state */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 5;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Features Section */
+        .features {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInUp 1s ease-out 1s both;
+        }
+
+        .features h2 {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-item {
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .feature-desc {
+            font-size: 1rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            opacity: 0.8;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1.2rem;
+            }
+
+            .phone-mockup {
+                width: 280px;
+                height: 606px;
+                border-radius: 40px;
+                padding: 12px;
+            }
+
+            .phone-screen {
+                border-radius: 32px;
+            }
+
+            .phone-notch {
+                width: 120px;
+                height: 24px;
+            }
+
+            .phone-gallery {
+                grid-template-columns: 1fr;
+            }
+
+            .features h2 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="showcase-container">
+        <!-- Hero Section -->
+        <div class="hero">
+            <h1>🌌 Social Galaxy</h1>
+            <p>Connect with people in a whole new dimension</p>
+            <div class="cta-buttons">
+                <a href="#demo" class="cta-button cta-primary">Try Live Demo</a>
+                <a href="https://github.com/yourusername/social-galaxy" class="cta-button cta-secondary">View on GitHub</a>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="features">
+            <h2>✨ Features</h2>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">🌐</div>
+                    <div class="feature-title">3D Social Network</div>
+                    <div class="feature-desc">Visualize your connections in an immersive 3D galaxy</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🎉</div>
+                    <div class="feature-title">Event Management</div>
+                    <div class="feature-desc">Create and join events with your friends</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">👤</div>
+                    <div class="feature-title">User Profiles</div>
+                    <div class="feature-desc">Customize your profile and share your interests</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🔍</div>
+                    <div class="feature-title">Explore</div>
+                    <div class="feature-desc">Discover new connections and communities</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Interactive Demo -->
+        <div class="main-demo" id="demo">
+            <div class="demo-label">📱 Interactive Demo</div>
+            <div class="phone-mockup">
+                <div class="phone-notch"></div>
+                <div class="phone-screen">
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <div class="loading-text">Loading app...</div>
+                    </div>
+                    <iframe 
+                        src="/" 
+                        class="app-iframe" 
+                        id="appIframe"
+                        title="Social Galaxy App"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+                        onload="document.getElementById('loading').style.display='none';"
+                    ></iframe>
+                </div>
+                <div class="home-indicator"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Built with ❤️ using Expo & React Native</p>
+            <p style="margin-top: 10px;">© 2026 Social Galaxy. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

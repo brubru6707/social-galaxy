@@ -14,8 +14,10 @@ import {
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
+import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 import Confetti from '../../components/Confetti';
 import EventDetails from '../../components/event-details';
+import EventQuestionModal from '../../components/event-question-modal';
 import { UserType as GalaxyUserType } from '../../components/lobby';
 import { getNemesisAndBestie } from '../../components/lobby-match-utils';
 import { SocialGalaxy, calculateMatchScore } from '../../components/social-galaxy';
@@ -214,7 +216,7 @@ export default function HomeScreen() {
                       <Text style={[styles.matchLabel, { color: '#FF5CB3' }]}>Nemesis</Text>
                       <Image source={{ uri: nemesis.profile_picture }} style={styles.avatar} />
                       <Text style={styles.matchName}>{nemesis.name}</Text>
-                      <Text style={[styles.matchScore, { color: '#FF5CB3' }]}>Match: {calculateMatchScore(currentUser, nemesis)}%</Text>
+                      <Text style={[styles.matchScoreText, { color: '#FF5CB3' }]}>Match: {currentUser && calculateMatchScore(currentUser, nemesis)}%</Text>
                     </View>
                   )}
                   {bestie && (
@@ -222,7 +224,7 @@ export default function HomeScreen() {
                       <Text style={[styles.matchLabel, { color: '#5CFFB3' }]}>Bestie</Text>
                       <Image source={{ uri: bestie.profile_picture }} style={styles.avatar} />
                       <Text style={styles.matchName}>{bestie.name}</Text>
-                      <Text style={[styles.matchScore, { color: '#5CFFB3' }]}>Match: {calculateMatchScore(currentUser, bestie)}%</Text>
+                      <Text style={[styles.matchScoreText, { color: '#5CFFB3' }]}>Match: {currentUser && calculateMatchScore(currentUser, bestie)}%</Text>
                     </View>
                   )}
                 </View>
@@ -288,29 +290,22 @@ export default function HomeScreen() {
       </SafeAreaView>
       : 
       <>
-        {/* Hot Question Modal */}
-        <Modal visible={showModal} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
-                <Text style={styles.closeText}>X</Text>
-              </TouchableOpacity>
-              <Text style={[styles.modalQuestion, { textAlign: 'center' }]}>{questionText}</Text>
-              <View style={styles.buttonContainerRow}>
-                <TouchableOpacity style={[styles.optionButton, styles.leftOptionButton]} onPress={() => { setShowModal(false); setAnsweredHotTake(questionText); addVote('left'); }}>
-                  <Text style={styles.leftOptionText}>{option1}</Text>
-                </TouchableOpacity>
-                <View style={styles.vsContainer}>
-                  <Text style={styles.vsText}>vs</Text>
-                </View>
-                <TouchableOpacity style={[styles.optionButton, styles.rightOptionButton]} onPress={() => { setShowModal(false); setAnsweredHotTake(questionText); addVote('right'); }}>
-                  <Text style={styles.rightOptionText}>{option2}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        {/* Hot Question Modal (shared component) */}
+        <EventQuestionModal
+          visible={showModal}
+          question={questionText}
+          leftOption={option1}
+          rightOption={option2}
+          onSelect={(answer) => {
+            setShowModal(false);
+            setAnsweredHotTake(questionText);
+            addVote(answer);
+          }}
+          onClose={() => setShowModal(false)}
+        />
         <SafeAreaView style={styles.container}>
+          {/* Animated Liquid Gradient Background */}
+          <AnimatedLiquidGradient />
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {/* Fun Header */}
             <View style={styles.headerWrap}>
@@ -347,7 +342,6 @@ export default function HomeScreen() {
                 </View>
               )}
               <Text style={styles.greeting}>Hey, {currentUser?.name || 'Party Person'}! 🎉</Text>
-              <Text style={styles.subtitle}>Your social universe, reimagined</Text>
             </View>
             {/* Recent Events Carousel */}
             <View style={styles.section}>
@@ -385,7 +379,7 @@ export default function HomeScreen() {
   );
 }
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   hotTakeHeaderWrap: {
     width: '100%',
@@ -919,7 +913,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 2,
   },
-  matchScore: {
+  matchScoreText: {
     fontWeight: 'bold',
     fontSize: 14,
     marginTop: 2,

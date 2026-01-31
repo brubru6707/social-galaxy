@@ -25,6 +25,45 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## Web Demo with Phone Mockup 📱
+
+This project includes a web demo showcased in a realistic phone mockup frame, perfect for showcasing on websites.
+
+### Build and Deploy Web Demo
+
+1. **Build the web version:**
+   ```bash
+   npm run vercel-build
+   ```
+   This generates static files in the `dist/` folder.
+
+2. **Deploy to Vercel:**
+   ```bash
+   npx vercel
+   ```
+   Or connect your GitHub repo to Vercel for automatic deployments.
+
+3. **Access the demo:**
+   - Main app: `https://your-domain.vercel.app/`
+   - Phone mockup demo: `https://your-domain.vercel.app/demo`
+
+### Local Development for Web
+
+Run the web version locally:
+```bash
+npm run web
+```
+
+Then visit `http://localhost:8081` (or the port shown in the terminal).
+
+### Demo Features
+
+- 📱 Realistic iPhone mockup frame with notch and home indicator
+- 🎨 Beautiful gradient background
+- 📏 Responsive design that works on all screen sizes
+- ⚡ Fully functional web version of the app inside the frame
+- 🌐 Easy to embed on marketing websites or portfolios
+
 ## Get a fresh project
 
 When you're ready, run:

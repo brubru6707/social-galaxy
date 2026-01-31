@@ -9,12 +9,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
+import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 
 export default function ExploreScreen() {
   const allEvents = mockData.events || [];
 
   return (
     <SafeAreaView style={styles.container}>
+      <AnimatedLiquidGradient />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerWrap}>
           <Text style={styles.logo}>Explore</Text>

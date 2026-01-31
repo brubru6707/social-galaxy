@@ -7,11 +7,13 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 import stickers from '../../assets/stickers.json';
+import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 
 export default function ProfileScreen() {
   const { currentUser } = useUser();
   const scrollViewRef = useRef<ScrollView>(null);
   const profileCaptureRef = useRef<View>(null);
+  const rootCaptureRef = useRef<View>(null);
   const [emojiPositions, setEmojiPositions] = useState<{[key: number]: {x: number, y: number}}>({});
   const gestureStartPositions = useRef<{[key: number]: {x: number, y: number}}>({});
   const emojiAnimValues = useRef<{[key: number]: {translateX: Animated.Value, translateY: Animated.Value, scale: Animated.Value}}>({});
@@ -65,14 +67,15 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} ref={rootCaptureRef}>
+      <AnimatedLiquidGradient />
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Everything above Hot Takes */}
-        <View ref={profileCaptureRef} collapsable={false} style={{backgroundColor: '#000'}}>
+        <View collapsable={false} style={{backgroundColor: 'transparent'}}>
           <View style={styles.profileContainer}>
             {/* Gear Icon at top right */}
             <TouchableOpacity style={styles.gearButton}>
@@ -97,10 +100,9 @@ export default function ProfileScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.shareButton} onPress={async () => {
                 try {
-                  const uri = await captureRef(profileCaptureRef, {
+                  const uri = await captureRef(rootCaptureRef, {
                     format: 'png',
                     quality: 1,
-                    backgroundColor: '#000', // Ensure black background when capturing
                   });
                   if (Platform.OS === 'web') {
                     const link = document.createElement('a');

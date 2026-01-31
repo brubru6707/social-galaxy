@@ -1,11 +1,10 @@
 import DraggableStickerEmoji from '@/components/Profile/DraggableStickerEmoji';
 import ProfileInfo from '@/components/Profile/ProfileInfo';
+import ShareProfileCard from '@/components/ShareProfileCard';
 import { useUser } from '@/contexts/UserContext';
-import * as Sharing from 'expo-sharing';
 import React, { useRef, useState } from 'react';
-import { Animated, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { captureRef } from 'react-native-view-shot';
 import stickersData from '../../assets/stickers.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 
@@ -15,6 +14,7 @@ export default function ProfileScreen() {
   const profileCaptureRef = useRef<View>(null);
   const rootCaptureRef = useRef<View>(null);
   const [emojiPositions, setEmojiPositions] = useState<{[key: number]: {x: number, y: number}}>({});
+  const [showShareCard, setShowShareCard] = useState(false);
   const gestureStartPositions = useRef<{[key: number]: {x: number, y: number}}>({});
   const emojiAnimValues = useRef<{[key: number]: {translateX: Animated.Value, translateY: Animated.Value, scale: Animated.Value}}>({});
 
@@ -69,24 +69,12 @@ export default function ProfileScreen() {
   };
 
 
+  // Derive user stickers from hot take answers
+  const userStickers = userData.hotTakes.map((take: { answer: string }) => getAnswerEmoji(take.answer));
+
   // Share and Edit handlers
-  const handleShare = async () => {
-    try {
-      const uri = await captureRef(rootCaptureRef, {
-        format: 'png',
-        quality: 1,
-      });
-      if (Platform.OS === 'web') {
-        const link = document.createElement('a');
-        link.href = uri;
-        link.download = 'profile.png';
-        link.click();
-      } else {
-        await Sharing.shareAsync(uri);
-      }
-    } catch (e) {
-      alert('Failed to share profile: ' + e);
-    }
+  const handleShare = () => {
+    setShowShareCard(true);
   };
 
   const handleEdit = () => {
@@ -128,6 +116,21 @@ export default function ProfileScreen() {
           })}
         </View>
       </ScrollView>
+
+      {/* Share Profile Card Modal */}
+      <Modal 
+        visible={showShareCard} 
+        transparent 
+        animationType="fade" 
+        onRequestClose={() => setShowShareCard(false)}
+      >
+        <ShareProfileCard
+          profilePicture={userData.profile_picture}
+          name={userData.firstName}
+          stickers={userStickers}
+          onClose={() => setShowShareCard(false)}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }

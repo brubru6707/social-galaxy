@@ -1,3 +1,4 @@
+import * as Notifications from 'expo-notifications';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // Define the User type based on your mock_data.json
@@ -51,9 +52,29 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [votes, setVotes] = useState({ left: 0, right: 0 });
   const [showResults, setShowResults] = useState(false);
   const [endedEvents, setEndedEvents] = useState<Record<string, { leftPercent: number; rightPercent: number }>>({});
+  const [userVote, setUserVote] = useState<'left' | 'right' | null>(null);
+
+  // Setup notifications
+  useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+
+    (async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Notification permissions not granted');
+      }
+    })();
+  }, []);
 
   const addVote = (side: 'left' | 'right') => {
     setVotes(prev => ({ ...prev, [side]: prev[side] + 1 }));
+    setUserVote(side);
   };
 
   const endEvent = (eventId: string) => {
@@ -66,8 +87,48 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  const endDay = () => {
+  const endDay = async () => {
     setShowResults(true);
+    
+    // Send notification to user about results
+    if (userVote && dailyQuestion) {
+      const total = votes.left + votes.right;
+      const leftPercent = total > 0 ? Math.round((votes.left / total) * 100) : 0;
+      const rightPercent = 100 - leftPercent;
+      
+      const userWon = (userVote === 'left' && leftPercent >= 50) || (userVote === 'right' && rightPercent >= 50);
+      const winningOption = leftPercent >= 50 ? dailyQuestion.left : dailyQuestion.right;
+      
+      let title, body;
+      if (userWon) {
+        const messages = [
+          `OMG YOU WON!! 🎉`,
+          `YOOO YOU CALLED IT!! 💯`,
+          `NO WAY YOU WON!! 🔥`,
+          `BRO YOU CRUSHED IT!! ⚡`,
+        ];
+        title = messages[Math.floor(Math.random() * messages.length)];
+        body = `${winningOption} gang came through with ${userVote === 'left' ? leftPercent : rightPercent}%!! 😤`;
+      } else {
+        const messages = [
+          `rip you took the L 💀`,
+          `yeah... you lost this one chief 😬`,
+          `oof that didn't age well 💩`,
+          `L + ratio my guy 🤡`,
+        ];
+        title = messages[Math.floor(Math.random() * messages.length)];
+        body = `${winningOption} won with ${leftPercent >= 50 ? leftPercent : rightPercent}% lmaoo`;
+      }
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: true,
+        },
+        trigger: {type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 2}, // delay notification by 10 seconds
+      });
+    }
   };
 
   const newDay = () => {

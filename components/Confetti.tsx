@@ -112,7 +112,7 @@ const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000, count = 50
   if (!active || pieces.length === 0) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} pointerEvents="none">
       {pieces.map((piece) => (
         piece.isEmoji ? (
           <Animated.Text

@@ -37,17 +37,24 @@ export default function EventDetails({ event }: EventDetailsProps) {
   const eventResult = endedEvents[event.id];
   const eventEnded = !!eventResult;
 
-  // Show confetti when event ends if user is on winning side
+  // Show confetti when event results appear and user won
   useEffect(() => {
     if (eventEnded && eventResult && userAnswer) {
       const userWon = (userAnswer === 'left' && eventResult.leftPercent >= 50) || 
                        (userAnswer === 'right' && eventResult.rightPercent >= 50);
       if (userWon) {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 4000);
+        // Small delay to ensure rendering is complete
+        const showTimer = setTimeout(() => {
+          setShowConfetti(true);
+        }, 100);
+        const hideTimer = setTimeout(() => setShowConfetti(false), 4100);
+        return () => {
+          clearTimeout(showTimer);
+          clearTimeout(hideTimer);
+        };
       }
     }
-  }, [eventEnded, eventResult, userAnswer]);
+  }, [eventEnded, eventResult?.leftPercent, eventResult?.rightPercent, userAnswer]);
 
   // Show modal only if user is not already attending and hasn't answered yet
   const handleGoingPress = () => {

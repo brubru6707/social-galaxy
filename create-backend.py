@@ -139,6 +139,7 @@ for i in range(NUM_USERS):
             user_events.append(evt)
             evt["attendees"].append(f"u_{i}") # Add user to event
 
+
     users.append({
         "id": f"u_{i}",
         "name": user_name,
@@ -147,7 +148,15 @@ for i in range(NUM_USERS):
         "profile_picture": f"https://robohash.org/{user_name}.png",
         "events_gone_to": user_events,
         "hot_take_answers": user_answers
+        # 'mutuals' will be added after all users are created
     })
+
+# --- ASSIGN MUTUALS (FRIENDS) ---
+user_ids = [user["id"] for user in users]
+for user in users:
+    possible_friends = [uid for uid in user_ids if uid != user["id"]]
+    mutuals = random.sample(possible_friends, min(15, len(possible_friends)))
+    user["mutuals"] = mutuals
 
 # --- COMPILE FINAL JSON ---
 final_db = {

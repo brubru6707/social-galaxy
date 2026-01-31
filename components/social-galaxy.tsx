@@ -226,17 +226,27 @@ export function GalaxyField({
     const generatedNodes = generateGalaxyData(users);
     return generatedNodes;
   }, [users]);
-  
+
   // Safety check - return early if no nodes
   if (nodes.length === 0) {
     return null;
   }
-  
+
   const textures = useTexture(nodes.map(node => node.user.profile_picture));
   const [hoveredId, setHoveredId] = useState<number | null>(null);
-  
+
   // Shared geometry - reuse across all meshes (8 segments instead of 32)
   const circleGeometry = useMemo(() => new THREE.CircleGeometry(0.5, 8), []);
+
+  // --- Draw lines to mutuals (friends) ---
+  // Get current user from mockData
+  const currentUserId = mockData.current_user;
+  const currentUserNode = nodes.find(n => n.user.id === currentUserId);
+
+  // Get mutuals (friends) from the current user's mutuals attribute
+  const currentUserMutualIds = currentUserNode?.user.mutuals || [];
+  // Find nodes for each mutual friend
+  const mutualNodes = nodes.filter(n => currentUserMutualIds.includes(n.user.id));
 
   return (
     <group
@@ -245,6 +255,24 @@ export function GalaxyField({
         onSelect(null);
       }}
     >
+      {/* Draw lines from current user to mutuals (friends) */}
+      {currentUserNode && mutualNodes.map((node, idx) => (
+        <line key={"mutual-" + node.user.id}>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              count={2}
+              array={new Float32Array([
+                currentUserNode.x, currentUserNode.y, currentUserNode.z,
+                node.x, node.y, node.z
+              ])}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <lineBasicMaterial attach="material" color="#A259FF" linewidth={0.5} />
+        </line>
+      ))}
+
       {nodes.map((node, i) => (
         <Billboard
           key={i}

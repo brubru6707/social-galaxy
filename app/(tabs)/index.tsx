@@ -57,11 +57,10 @@ type UserType = {
 
 export default function HomeScreen() {
   const allEvents = mockData.events || [];
-  const currentUserId = mockData.current_user;
+  const currentUserId = mockData.current_user_id || '';
   const currentUserData = mockData.users.find(u => u.id === currentUserId);
   const userEventIds = currentUserData?.events_gone_to?.map(e => e.id) || [];
   const recentEvents = allEvents.filter(e => userEventIds.includes(e.id));
-
   const { currentUser, dailyQuestion, addVote, showResults, setShowResults, votes, finalResults } = useUser();
   // Use shared final results from UserContext instead of local state
   const finalLeftPercent = finalResults?.leftPercent || 0;
@@ -78,7 +77,6 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<'lobby' | 'galaxy'>('lobby'); // Tab within the second page
   const [showConfetti, setShowConfetti] = useState(false);
   const [userAnswer, setUserAnswer] = useState<'left' | 'right' | null>(null);
-
   // Reset percentages and animations when results are hidden
   useEffect(() => {
     if (!showResults) {
@@ -140,6 +138,7 @@ export default function HomeScreen() {
     setShowModal(false);
     // Set galaxyUsers for this event
     const users = mockData.users.filter((u: GalaxyUserType) => event.attendees.includes(u.id));
+    console.log("Galaxy Users for event:", users);
     setGalaxyUsers(users);
     setActivePage(0); // Always start at Event Details
   }

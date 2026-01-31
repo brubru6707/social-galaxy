@@ -6,7 +6,7 @@ import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 import { useUser } from '../../contexts/UserContext';
 
 export default function AdminScreen() {
-  const { dailyQuestion, votes, endDay, newDay, allUsers, endEvent } = useUser();
+  const { dailyQuestion, votes, endDay, newDay, allUsers, endEvent, currentUser } = useUser();
 
   // Get all events from mock data (or wherever your events are stored)
   const allEvents = mockData.events || [];
@@ -26,6 +26,24 @@ export default function AdminScreen() {
     <SafeAreaView style={styles.container}>
       <AnimatedLiquidGradient />
       <Text style={styles.title}>Admin Portal</Text>
+      
+      {/* Current User Preferences */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Current User Preferences</Text>
+        {currentUser?.preferences ? (
+          <View style={styles.preferencesContainer}>
+            {Object.entries(currentUser.preferences).map(([category, value]) => (
+              <View key={category} style={styles.preferenceItem}>
+                <Text style={styles.preferenceLabel}>{category.charAt(0).toUpperCase() + category.slice(1)}:</Text>
+                <Text style={styles.preferenceValue}>{value.toFixed(1)}%</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.noQuestion}>No user data available</Text>
+        )}
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current Day</Text>
         {dailyQuestion ? (
@@ -111,6 +129,26 @@ const styles = StyleSheet.create({
   votes: {
     fontSize: 16,
     color: '#ccc',
+  },
+  preferencesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  preferenceItem: {
+    alignItems: 'center',
+    marginBottom: 10,
+    minWidth: '45%',
+  },
+  preferenceLabel: {
+    fontSize: 14,
+    color: '#ccc',
+    marginBottom: 5,
+  },
+  preferenceValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFD700',
   },
   buttonContainer: {
     flexDirection: 'row',

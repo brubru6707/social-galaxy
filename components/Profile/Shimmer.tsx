@@ -10,7 +10,6 @@ type ShimmerProps = {
 
 export default function EmojiShimmer({ emoji, size = 80 }: ShimmerProps) {
   const animatedValue = useRef(new Animated.Value(0)).current;
-  console.log('[DEBUG] Rendering EmojiShimmer for', emoji, 'with size', size);
   useEffect(() => {
     Animated.loop(
       Animated.timing(animatedValue, {

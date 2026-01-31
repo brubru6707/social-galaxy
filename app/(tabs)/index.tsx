@@ -18,6 +18,7 @@ import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 import Confetti from '../../components/Confetti';
 import EventDetails from '../../components/event-details';
 import EventQuestionModal from '../../components/event-question-modal';
+import HotTakeResults from '../../components/hot-take-results';
 import { UserType as GalaxyUserType } from '../../components/lobby';
 import { getNemesisAndBestie } from '../../components/lobby-match-utils';
 import { SocialGalaxy, calculateMatchScore } from '../../components/social-galaxy';
@@ -313,20 +314,13 @@ export default function HomeScreen() {
               {answeredHotTake && (
                 <View style={styles.hotTakeHeaderWrap}>
                   {showResults ? (
-                    <View style={styles.progressContainer}>
-                      <View style={styles.percentageContainer}>
-                        <Text style={styles.percentageText}>{finalLeftPercent}%</Text>
-                        <Text style={styles.percentageText}>{finalRightPercent}%</Text>
-                      </View>
-                      <View style={styles.barContainer}>
-                        <Animated.View style={[styles.leftBar, { width: leftAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }]}>
-                          <Text style={styles.barText}>{option1}</Text>
-                        </Animated.View>
-                        <Animated.View style={[styles.rightBar, { width: rightAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }]}>
-                          <Text style={styles.barText}>{option2}</Text>
-                        </Animated.View>
-                      </View>
-                    </View>
+                    <HotTakeResults
+                      leftOption={option1}
+                      rightOption={option2}
+                      leftPercent={finalLeftPercent}
+                      rightPercent={finalRightPercent}
+                      animate={true}
+                    />
                   ) : (
                     <View style={styles.questionContainer}>
                       <Text style={styles.questionText}>{questionText}</Text>

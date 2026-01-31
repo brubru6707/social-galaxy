@@ -24,6 +24,9 @@ interface UserContextType {
   newDay: () => void;
   showResults: boolean;
   setShowResults: (show: boolean) => void;
+  rsvpToEvent: (eventId: string) => void;
+  endedEvents: Record<string, { leftPercent: number; rightPercent: number }>;
+  endEvent: (eventId: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -36,6 +39,7 @@ export const useUser = () => {
   return context;
 };
 
+
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -46,9 +50,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [votes, setVotes] = useState({ left: 0, right: 0 });
   const [showResults, setShowResults] = useState(false);
+  const [endedEvents, setEndedEvents] = useState<Record<string, { leftPercent: number; rightPercent: number }>>({});
 
   const addVote = (side: 'left' | 'right') => {
     setVotes(prev => ({ ...prev, [side]: prev[side] + 1 }));
+  };
+
+  const endEvent = (eventId: string) => {
+    // Generate mock percentages for now
+    const left = Math.floor(Math.random() * 100);
+    const right = 100 - left;
+    setEndedEvents(prev => ({
+      ...prev,
+      [eventId]: { leftPercent: left, rightPercent: right }
+    }));
   };
 
   const endDay = () => {
@@ -68,6 +83,35 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const nextIndex = (currentIndex + 1) % questions.length;
     setDailyQuestion(questions[nextIndex]);
     setVotes({ left: 0, right: 0 }); // Reset votes for new day
+  };
+
+  // RSVP persistence logic
+  const rsvpToEvent = (eventId: string) => {
+    setAllUsers(prevUsers => {
+      return prevUsers.map(user => {
+        if (user.id === currentUser?.id) {
+          // Only add if not already attending
+          if (!user.events_gone_to.includes(eventId)) {
+            return {
+              ...user,
+              events_gone_to: [...user.events_gone_to, eventId],
+            };
+          }
+        }
+        return user;
+      });
+    });
+    // Also update currentUser
+    setCurrentUser(prevUser => {
+      if (!prevUser) return prevUser;
+      if (!prevUser.events_gone_to.includes(eventId)) {
+        return {
+          ...prevUser,
+          events_gone_to: [...prevUser.events_gone_to, eventId],
+        };
+      }
+      return prevUser;
+    });
   };
 
   useEffect(() => {
@@ -94,7 +138,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults }}>
+    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent }}>
       {children}
     </UserContext.Provider>
   );

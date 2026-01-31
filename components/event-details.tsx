@@ -2,6 +2,7 @@ import { useUser } from '@/contexts/UserContext';
 import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import EventQuestionModal from './event-question-modal';
+import HotTakeResults from './hot-take-results';
 
 export type EventDetailsProps = {
   event: {
@@ -20,12 +21,17 @@ export type EventDetailsProps = {
 };
 
 
+
 export default function EventDetails({ event }: EventDetailsProps) {
-  const { currentUser, dailyQuestion } = useUser();
-  const isUserAttending = currentUser && event.attendees?.includes(currentUser.id);
+  const { currentUser, dailyQuestion, rsvpToEvent, endedEvents } = useUser();
+  const isUserAttending = currentUser && currentUser.events_gone_to.includes(event.id);
   const [goingPressed, setGoingPressed] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [answered, setAnswered] = useState(false);
+
+  // Check if this event has been ended by admin
+  const eventResult = endedEvents[event.id];
+  const eventEnded = !!eventResult;
 
   // Show modal only if user is not already attending and hasn't answered yet
   const handleGoingPress = () => {
@@ -38,7 +44,9 @@ export default function EventDetails({ event }: EventDetailsProps) {
   const handleAnswer = (answer: string) => {
     setShowQuestionModal(false);
     setAnswered(true);
-    // You can add logic here to save the answer if needed
+    if (currentUser && !isUserAttending) {
+      rsvpToEvent(event.id);
+    }
   };
 
   return (
@@ -47,6 +55,21 @@ export default function EventDetails({ event }: EventDetailsProps) {
         <Image source={{ uri: event.event_picture }} style={styles.image} />
       )}
       <Text style={styles.title}>{event.title}</Text>
+      
+      {/* Show results after event ends */}
+      {eventEnded && eventResult && (
+        <View style={{ marginTop: 16, marginBottom: 16, width: '100%' }}>
+          <HotTakeResults
+            leftOption={dailyQuestion?.left || 'Option 1'}
+            rightOption={dailyQuestion?.right || 'Option 2'}
+            leftPercent={eventResult.leftPercent}
+            rightPercent={eventResult.rightPercent}
+            animate={true}
+            showWrapper={true}
+          />
+        </View>
+      )}
+      
       <Text style={styles.location}>{event.location}</Text>
       {event.date && <Text style={styles.info}>Date: {event.date}</Text>}
       {event.time && <Text style={styles.info}>Time: {event.time}</Text>}

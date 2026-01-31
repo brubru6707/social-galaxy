@@ -20,7 +20,6 @@ const styles = StyleSheet.create({
   },
   stickerEmoji: {
     fontSize: 30,
-    marginLeft: 10,
     textShadowColor: '#FFFFFF',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 4,
@@ -30,14 +29,5 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
     zIndex: 1,
-  },
-  shimmerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    zIndex: 2,
-  },
+  }
 });

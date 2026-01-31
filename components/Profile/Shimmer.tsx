@@ -1,52 +1,73 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
-export default function Shimmer({ style }: { style?: any }) {
+type ShimmerProps = {
+  emoji: string;
+  size?: number;
+  style?: any;
+};
+
+export default function ShimmerNoMask({ emoji, size = 80, style }: ShimmerProps) {
   const shimmerAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.delay(800),
-      ])
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear, // Smooth continuous movement
+        useNativeDriver: true,
+      })
     ).start();
   }, [shimmerAnim]);
 
+  // Move the beam from far left to far right
   const translateX = shimmerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-60, 60],
-  });
-
-  const opacity = shimmerAnim.interpolate({
-    inputRange: [0, 0.3, 0.7, 1],
-    outputRange: [0, 0.6, 0.6, 0],
+    outputRange: [-size * 1.5, size * 1.5], 
   });
 
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[{
-        position: 'absolute',
-        top: -5,
-        left: -5,
-        width: 46,
-        height: 46,
-        transform: [{ translateX }, { rotate: '45deg' }],
-        opacity,
-      }, style]}
-    >
-      <LinearGradient
-        colors={["transparent", "rgba(255, 255, 255, 0.9)", "rgba(255, 255, 255, 0.9)", "transparent"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={{ flex: 1, width: '100%', height: '100%' }}
-      />
-    </Animated.View>
+    <View style={[styles.container, style, { width: size, height: size }]}>
+      {/* 1. The Emoji */}
+      <Text style={[styles.emoji, { fontSize: size, lineHeight: size }]}>
+        {emoji}
+      </Text>
+
+      {/* 2. The "Spotlight" Beam Overlay */}
+      {/* We use overflow: 'hidden' on the container to keep the beam inside the box */}
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { 
+            transform: [{ translateX }],
+            opacity: 0.5 // Keep it subtle so it doesn't block the emoji
+          },
+        ]}
+      >
+        <LinearGradient
+          // A softer, wider white beam
+          colors={['transparent', 'white', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }} // Horizontal swipe
+          style={{ flex: 1, width: '50%' }} // Beam is 50% width of container
+        />
+      </Animated.View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    overflow: 'hidden', // Essential: cuts off the beam when it leaves the box
+    justifyContent: 'center',
+    alignItems: 'center',
+    // Optional: rounds the spotlight edges if you want a circular "coin" look
+    // borderRadius: 999, 
+  },
+  emoji: {
+    textAlign: 'center',
+    textAlignVertical: 'center',
+  },
+});

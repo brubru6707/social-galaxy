@@ -74,8 +74,8 @@ export default function HomeScreen() {
   const [galaxyUsers, setGalaxyUsers] = useState<GalaxyUserType[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [activePage, setActivePage] = useState(0); // 0: Event, 1: Lobby
-  const [showGalaxy, setShowGalaxy] = useState(false);
+  const [activePage, setActivePage] = useState(0); // 0: Event, 1: Lobby/Galaxy
+  const [activeTab, setActiveTab] = useState<'lobby' | 'galaxy'>('lobby'); // Tab within the second page
   const [showConfetti, setShowConfetti] = useState(false);
   const [userAnswer, setUserAnswer] = useState<'left' | 'right' | null>(null);
 
@@ -149,22 +149,6 @@ export default function HomeScreen() {
     setActivePage(0);
   }
 
-  if (showGalaxy && selectedEvent) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Social Galaxy</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setShowGalaxy(false)}>
-            <Text style={styles.closeText}>Back</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={{ flex: 1 }}>
-          <SocialGalaxy users={galaxyUsers} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <>
       {selectedEvent ?
@@ -203,53 +187,81 @@ export default function HomeScreen() {
               <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 60, zIndex: 10 }} />
             </PanGestureHandler>
           </View>
-          {/* Lobby Page */}
-          <View style={{ width }}>
-            <TouchableOpacity style={[styles.actionButton, { position: 'absolute', top: 20, right: 20, backgroundColor: '#FF5CB3', zIndex: 20 }]} onPress={() => setShowGalaxy(true)}>
-              <Text style={styles.actionButtonText}>Social Galaxy</Text>
-            </TouchableOpacity>
-            {/* Nemesis and Bestie Section */}
-            {(() => {
-              const { nemesis, bestie } = currentUser ? getNemesisAndBestie(currentUser, galaxyUsers) : { nemesis: null, bestie: null };
-              return (
-                <View style={styles.matchRow}>
-                  {nemesis && (
-                    <View style={[styles.matchCard, { backgroundColor: '#2A002A' }]}>
-                      <Text style={[styles.matchLabel, { color: '#FF5CB3' }]}>Nemesis</Text>
-                      <Image source={{ uri: nemesis.profile_picture }} style={styles.avatar} />
-                      <Text style={styles.matchName}>{nemesis.name}</Text>
-                      <Text style={[styles.matchScoreText, { color: '#FF5CB3' }]}>Match: {currentUser && calculateMatchScore(currentUser, nemesis)}%</Text>
+          {/* Lobby/Galaxy Page with Tabs */}
+          <View style={{ width, flex: 1 }}>
+            {/* Tab Bar */}
+            <View style={styles.tabBar}>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'lobby' && styles.tabActive]}
+                onPress={() => setActiveTab('lobby')}
+              >
+                <Text style={[styles.tabText, activeTab === 'lobby' && styles.tabTextActive]}>
+                  Lobby
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'galaxy' && styles.tabActive]}
+                onPress={() => setActiveTab('galaxy')}
+              >
+                <Text style={[styles.tabText, activeTab === 'galaxy' && styles.tabTextActive]}>
+                  Social Galaxy
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Tab Content */}
+            {activeTab === 'lobby' ? (
+              <View style={{ flex: 1 }}>
+                {/* Nemesis and Bestie Section */}
+                {(() => {
+                  const { nemesis, bestie } = currentUser ? getNemesisAndBestie(currentUser, galaxyUsers) : { nemesis: null, bestie: null };
+                  return (
+                    <View style={styles.matchRowTabs}>
+                      {nemesis && (
+                        <View style={[styles.matchCard, { backgroundColor: '#2A002A' }]}>
+                          <Text style={[styles.matchLabel, { color: '#FF5CB3' }]}>Nemesis</Text>
+                          <Image source={{ uri: nemesis.profile_picture }} style={styles.avatar} />
+                          <Text style={styles.matchName}>{nemesis.name}</Text>
+                          <Text style={[styles.matchScoreText, { color: '#FF5CB3' }]}>Match: {currentUser && calculateMatchScore(currentUser, nemesis)}%</Text>
+                        </View>
+                      )}
+                      {bestie && (
+                        <View style={[styles.matchCard, { backgroundColor: '#002A1A' }]}>
+                          <Text style={[styles.matchLabel, { color: '#5CFFB3' }]}>Bestie</Text>
+                          <Image source={{ uri: bestie.profile_picture }} style={styles.avatar} />
+                          <Text style={styles.matchName}>{bestie.name}</Text>
+                          <Text style={[styles.matchScoreText, { color: '#5CFFB3' }]}>Match: {currentUser && calculateMatchScore(currentUser, bestie)}%</Text>
+                        </View>
+                      )}
                     </View>
+                  );
+                })()}
+                <ScrollView contentContainerStyle={styles.lobbyScroll}>
+                  {galaxyUsers.length === 0 ? (
+                    <Text style={styles.emptyText}>No attendees found</Text>
+                  ) : (
+                    galaxyUsers.map((user) => (
+                      <View key={user.id} style={styles.userCard}>
+                        <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
+                        <View style={styles.userInfo}>
+                          <Text style={styles.name}>{user.name}</Text>
+                          <Text style={styles.bio}>{user.bio}</Text>
+                          <Text style={styles.stats}>
+                            Events attended: {user.events_gone_to.length} | Hot takes: {user.hot_take_answers.length}
+                          </Text>
+                        </View>
+                      </View>
+                    ))
                   )}
-                  {bestie && (
-                    <View style={[styles.matchCard, { backgroundColor: '#002A1A' }]}>
-                      <Text style={[styles.matchLabel, { color: '#5CFFB3' }]}>Bestie</Text>
-                      <Image source={{ uri: bestie.profile_picture }} style={styles.avatar} />
-                      <Text style={styles.matchName}>{bestie.name}</Text>
-                      <Text style={[styles.matchScoreText, { color: '#5CFFB3' }]}>Match: {currentUser && calculateMatchScore(currentUser, bestie)}%</Text>
-                    </View>
-                  )}
-                </View>
-              );
-            })()}
-            <ScrollView contentContainerStyle={styles.lobbyScroll}>
-              {galaxyUsers.length === 0 ? (
-                <Text style={styles.emptyText}>No attendees found</Text>
-              ) : (
-                galaxyUsers.map((user) => (
-                  <View key={user.id} style={styles.userCard}>
-                    <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
-                    <View style={styles.userInfo}>
-                      <Text style={styles.name}>{user.name}</Text>
-                      <Text style={styles.bio}>{user.bio}</Text>
-                      <Text style={styles.stats}>
-                        Events attended: {user.events_gone_to.length} | Hot takes: {user.hot_take_answers.length}
-                      </Text>
-                    </View>
-                  </View>
-                ))
-              )}
-            </ScrollView>
+                </ScrollView>
+              </View>
+            ) : (
+              <View style={{ flex: 1 }}>
+                <SocialGalaxy users={galaxyUsers} />
+              </View>
+            )}
+
+            {/* Swipe back gesture */}
             <PanGestureHandler
               onHandlerStateChange={(event) => {
                 if (event.nativeEvent.state === State.END) {
@@ -261,7 +273,7 @@ export default function HomeScreen() {
                 }
               }}
             >
-              <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 60, zIndex: 10 }} />
+              <View style={{ position: 'absolute', left: 0, top: 50, bottom: 0, width: 60, zIndex: 10 }} />
             </PanGestureHandler>
           </View>
         </ScrollView>
@@ -898,6 +910,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 16,
     marginTop: 60, // Account for the absolute positioned button
+  },
+  matchRowTabs: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  // Tab Bar styles
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(30, 30, 40, 0.95)',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  tabActive: {
+    backgroundColor: '#FFD700',
+  },
+  tabText: {
+    color: '#888',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#000',
+    fontWeight: 'bold',
   },
   matchCard: {
     alignItems: 'center',

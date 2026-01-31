@@ -2,6 +2,7 @@ import { Billboard, OrbitControls, useTexture } from '@react-three/drei/native';
 import { Canvas, useFrame } from '@react-three/fiber';
 import React, { Suspense, useMemo, useRef, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as THREE from 'three';
 import mockData from '../assets/mock_data.json';
@@ -512,6 +513,12 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
   const [showProfile, setShowProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showCommonalities, setShowCommonalities] = useState(false);
+
+  // Generate clusters for commonality display
+  const clusters = useMemo(() => {
+    return clusterUsers(users).filter(c => c.users.length > 1); // Only show groups, not solo
+  }, [users]);
 
   // Filter users based on search query
   const searchResults = useMemo(() => {
@@ -544,7 +551,7 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.canvasLayer, { width, height }]}> 
+      <View style={styles.canvasLayer}> 
         <Suspense fallback={<Text style={{ color: 'white', textAlign: 'center', marginTop: 100 }}>Loading galaxy...</Text>}>
           <Canvas 
             camera={{ 
@@ -577,6 +584,9 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
       <SafeAreaView style={styles.hudContainer} pointerEvents="box-none">
         <View style={styles.headerContainer}>
           <Text style={styles.header}>SOCIAL GALAXY</Text>
+          <Text style={styles.galaxyCount}>
+            {users.length} {users.length === 1 ? 'person' : 'people'} in this galaxy ✨
+          </Text>
           
           {/* Search Bar */}
           <View style={styles.searchContainer}>
@@ -680,16 +690,95 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
           </View>
         )}
       </SafeAreaView>
+
+      {/* Commonality Callouts Panel with Swipe Handle */}
+      <View style={[
+        styles.commonalityPanel, 
+        { height: showCommonalities ? height * 0.3 : 0 }
+      ]}>
+        {showCommonalities && (
+          <>
+            <View style={styles.commonalityHeader}>
+              <Text style={styles.commonalityTitle}>Shared Interests</Text>
+              <Text style={styles.commonalitySubtitle}>{clusters.length} groups found</Text>
+            </View>
+            <ScrollView 
+              style={styles.commonalityScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              {clusters.map((cluster) => (
+                <View key={cluster.id} style={styles.clusterCard}>
+                  <Text style={styles.clusterLabel}>{cluster.label}</Text>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.clusterUsersScroll}
+                  >
+                    {cluster.users.map((user) => (
+                      <TouchableOpacity 
+                        key={user.id} 
+                        style={styles.clusterUserItem}
+                        onPress={() => {
+                          const { nodes } = generateGalaxyData(users);
+                          const matchingNode = nodes.find(n => n.user.id === user.id);
+                          if (matchingNode) {
+                            setSelectedUser(matchingNode);
+                            setShowCommonalities(false);
+                          }
+                        }}
+                      >
+                        <Image 
+                          source={{ uri: user.profile_picture }} 
+                          style={styles.clusterUserImage} 
+                        />
+                        <Text style={styles.clusterUserName} numberOfLines={1}>
+                          {user.name.split(' ')[0]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              ))}
+              {clusters.length === 0 && (
+                <Text style={styles.noGroupsText}>No shared interest groups found</Text>
+              )}
+            </ScrollView>
+          </>
+        )}
+      </View>
+
+      {/* Swipe Handle for Commonality Panel */}
+      <PanGestureHandler
+        onHandlerStateChange={(event) => {
+          if (event.nativeEvent.state === State.END) {
+            const { translationY } = event.nativeEvent;
+            // Swipe up to show (negative Y), swipe down to hide (positive Y)
+            if (translationY < -30 && !showCommonalities) {
+              setShowCommonalities(true);
+            } else if (translationY > 30 && showCommonalities) {
+              setShowCommonalities(false);
+            }
+          }
+        }}
+      >
+        <View style={styles.swipeHandle}>
+          <View style={styles.swipeHandleBar} />
+          <Text style={styles.swipeHandleText}>
+            {showCommonalities ? 'Swipe down to close' : 'Swipe up for groups'}
+          </Text>
+        </View>
+      </PanGestureHandler>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  canvasLayer: { position: 'absolute', top: 0, left: 0, zIndex: 1 },
+  canvasLayer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 55, zIndex: 1 },
   hudContainer: { flex: 1, justifyContent: 'space-between', alignItems: 'center', padding: 20, zIndex: 2 },
   headerContainer: { width: '100%', alignItems: 'center' },
   header: { color: 'white', fontSize: 22, fontWeight: '900', letterSpacing: 2, marginTop: 10 },
+  galaxyCount: { color: '#FFD700', fontSize: 14, fontWeight: '600', marginTop: 4 },
   card: { backgroundColor: 'rgba(30, 30, 40, 0.95)', padding: 24, borderRadius: 20, width: '85%', alignItems: 'center', borderWidth: 1, borderColor: '#444' },
   profileImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 10 },
   cardTitle: { color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 5 },
@@ -764,5 +853,104 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     padding: 16,
+  },
+  // Commonality Callouts styles
+  swipeHandle: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(30, 30, 40, 0.95)',
+    paddingVertical: 12,
+    paddingBottom: 20,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#444',
+    zIndex: 10,
+  },
+  swipeHandleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#666',
+    borderRadius: 2,
+    marginBottom: 6,
+  },
+  swipeHandleText: {
+    color: '#888',
+    fontSize: 12,
+  },
+  commonalityPanel: {
+    position: 'absolute',
+    bottom: 55,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(20, 20, 30, 0.98)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#444',
+    zIndex: 9,
+    overflow: 'hidden',
+  },
+  commonalityHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    alignItems: 'center',
+  },
+  commonalityTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  commonalitySubtitle: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  commonalityScroll: {
+    flex: 1,
+    paddingHorizontal: 12,
+  },
+  clusterCard: {
+    backgroundColor: 'rgba(40, 40, 55, 0.9)',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  clusterLabel: {
+    color: '#FFD700',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  clusterUsersScroll: {
+    flexDirection: 'row',
+  },
+  clusterUserItem: {
+    alignItems: 'center',
+    marginRight: 16,
+    width: 60,
+  },
+  clusterUserImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
+  clusterUserName: {
+    color: 'white',
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  noGroupsText: {
+    color: '#888',
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 20,
   },
 });

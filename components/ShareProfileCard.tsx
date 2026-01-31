@@ -1,7 +1,8 @@
 import EmojiShimmer from '@/components/Profile/Shimmer';
 import * as Sharing from 'expo-sharing';
 import React, { useMemo, useRef, useState } from 'react';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { captureRef } from 'react-native-view-shot';
 
 type ShareProfileCardProps = {
@@ -46,16 +47,15 @@ export default function ShareProfileCard({
   const cardRef = useRef<View>(null);
   const [selectedBgColor, setSelectedBgColor] = useState(BACKGROUND_COLORS[0]);
 
-  // Generate random positions for stickers, avoiding center and staying within bounds
-  const stickerPositions = useMemo(() => {
+  // Generate initial random positions for stickers
+  const initialPositions = useMemo(() => {
     const positions: { x: number; y: number }[] = [];
-    const padding = 20; // Padding from card edges
+    const padding = 20;
     
-    // Bounds for sticker placement (relative to card center)
     const minX = -CARD_WIDTH / 2 + padding + STICKER_SIZE / 2;
     const maxX = CARD_WIDTH / 2 - padding - STICKER_SIZE / 2;
     const minY = -CARD_HEIGHT / 2 + padding + STICKER_SIZE / 2;
-    const maxY = CARD_HEIGHT / 2 - padding - STICKER_SIZE / 2 - 40; // Extra space for name at bottom
+    const maxY = CARD_HEIGHT / 2 - padding - STICKER_SIZE / 2 - 40;
 
     const isOverlappingCenter = (x: number, y: number) => {
       const distance = Math.sqrt(x * x + y * y);
@@ -65,7 +65,7 @@ export default function ShareProfileCard({
     const isOverlappingOther = (x: number, y: number, existingPositions: { x: number; y: number }[]) => {
       for (const pos of existingPositions) {
         const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
-        if (distance < STICKER_SIZE + 5) return true; // 5px gap between stickers
+        if (distance < STICKER_SIZE + 5) return true;
       }
       return false;
     };
@@ -89,6 +89,26 @@ export default function ShareProfileCard({
 
     return positions;
   }, [stickers.length]);
+
+  // Track current sticker positions (can be updated by dragging)
+  const [stickerPositions, setStickerPositions] = useState<{ [key: number]: { x: number; y: number } }>({});
+  
+  // Animated values for each sticker
+  const stickerAnimValues = useRef<{ [key: number]: { translateX: Animated.Value; translateY: Animated.Value; scale: Animated.Value } }>({});
+  const gestureStartPositions = useRef<{ [key: number]: { x: number; y: number } }>({});
+
+  // Get or create animated values for a sticker
+  const getStickerAnim = (index: number) => {
+    if (!stickerAnimValues.current[index]) {
+      const initialPos = initialPositions[index] || { x: 0, y: 0 };
+      stickerAnimValues.current[index] = {
+        translateX: new Animated.Value(initialPos.x),
+        translateY: new Animated.Value(initialPos.y),
+        scale: new Animated.Value(1),
+      };
+    }
+    return stickerAnimValues.current[index];
+  };
 
   const handleShare = async () => {
     try {
@@ -114,26 +134,68 @@ export default function ShareProfileCard({
       <View style={styles.container}>
         {/* Capturable Card */}
         <View ref={cardRef} style={[styles.card, { backgroundColor: selectedBgColor }]} collapsable={false}>
-          {/* Stickers randomly positioned */}
+          {/* Draggable stickers */}
           <View style={styles.stickersContainer}>
             {stickers.map((emoji, index) => {
-              const pos = stickerPositions[index];
-              if (!pos) return null;
+              const anim = getStickerAnim(index);
               return (
-                <View
+                <PanGestureHandler
                   key={index}
-                  style={[
-                    styles.stickerWrapper,
+                  onGestureEvent={Animated.event(
+                    [],
                     {
-                      transform: [
-                        { translateX: pos.x },
-                        { translateY: pos.y },
-                      ],
-                    },
-                  ]}
+                      useNativeDriver: false,
+                      listener: (event: any) => {
+                        const startPos = gestureStartPositions.current[index] || initialPositions[index] || { x: 0, y: 0 };
+                        const newX = startPos.x + event.nativeEvent.translationX;
+                        const newY = startPos.y + event.nativeEvent.translationY;
+                        anim.translateX.setValue(newX);
+                        anim.translateY.setValue(newY);
+                        setStickerPositions((prev) => ({
+                          ...prev,
+                          [index]: { x: newX, y: newY },
+                        }));
+                      },
+                    }
+                  )}
+                  onHandlerStateChange={(event) => {
+                    if (event.nativeEvent.state === State.BEGAN) {
+                      gestureStartPositions.current[index] = {
+                        x: (anim.translateX as any)._value,
+                        y: (anim.translateY as any)._value,
+                      };
+                      Animated.spring(anim.scale, {
+                        toValue: 1.3,
+                        useNativeDriver: false,
+                      }).start();
+                    } else if (
+                      event.nativeEvent.state === State.END ||
+                      event.nativeEvent.state === State.CANCELLED ||
+                      event.nativeEvent.state === State.FAILED
+                    ) {
+                      Animated.spring(anim.scale, {
+                        toValue: 1,
+                        useNativeDriver: false,
+                      }).start();
+                    }
+                  }}
                 >
-                  <EmojiShimmer emoji={emoji} size={STICKER_SIZE} />
-                </View>
+                  <Animated.View
+                    style={[
+                      styles.stickerWrapper,
+                      {
+                        transform: [
+                          { translateX: anim.translateX },
+                          { translateY: anim.translateY },
+                          { scale: anim.scale },
+                        ],
+                        zIndex: 9999,
+                      },
+                    ]}
+                  >
+                    <EmojiShimmer emoji={emoji} size={STICKER_SIZE} />
+                  </Animated.View>
+                </PanGestureHandler>
               );
             })}
           </View>

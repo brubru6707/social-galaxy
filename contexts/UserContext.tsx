@@ -10,6 +10,12 @@ export interface User {
   profile_picture: string;
   events_gone_to: any[];
   hot_take_answers: any[];
+  preferences: {
+    lifestyle: number;
+    tech: number;
+    entertainment: number;
+    food: number;
+  };
   mutuals?: any[]; // Add mutuals property for compatibility with mock_data.json
   // Add other fields as they appear in your data
 }
@@ -46,11 +52,7 @@ export const useUser = () => {
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [dailyQuestion, setDailyQuestion] = useState<{ question: string; left: string; right: string } | null>({
-    question: 'Coffee vs Tea',
-    left: 'Coffee',
-    right: 'Tea'
-  });
+  const [dailyQuestion, setDailyQuestion] = useState<{ question: string; left: string; right: string } | null>(null);
   const [votes, setVotes] = useState({ left: 0, right: 0 });
   const [showResults, setShowResults] = useState(false);
   const [endedEvents, setEndedEvents] = useState<Record<string, { leftPercent: number; rightPercent: number }>>({});
@@ -69,6 +71,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             shouldShowBanner: true,
             shouldPlaySound: true,
             shouldSetBadge: false,
+            shouldShowList: true,
           }),
         });
 
@@ -151,20 +154,66 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const initializeDailyQuestion = () => {
+    if (currentUser && currentUser.preferences) {
+      const preferences = currentUser.preferences;
+      
+      // Get all categories and their weights
+      const categories = Object.keys(preferences);
+      const weights = Object.values(preferences) as number[];
+      
+      // Weighted random selection of category
+      const totalWeight = weights.reduce((sum: number, weight: number) => sum + weight, 0);
+      let random = Math.random() * totalWeight;
+      
+      let selectedCategory = categories[0];
+      for (let i = 0; i < categories.length; i++) {
+        random -= weights[i];
+        if (random <= 0) {
+          selectedCategory = categories[i];
+          break;
+        }
+      }
+      
+      // Load questions from mock data for the selected category
+      const mockData = require('../assets/mock_data.json');
+      const categoryQuestions = mockData.hot_takes.filter((q: any) => 
+        !q.is_identity && q.category_id === selectedCategory
+      );
+      
+      if (categoryQuestions.length > 0) {
+        // Pick a random question from the selected category
+        const randomQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
+        
+        setDailyQuestion({
+          question: randomQuestion.question_text,
+          left: randomQuestion.option_1,
+          right: randomQuestion.option_2
+        });
+      } else {
+        // Fallback to a default question if category has no questions
+        setDailyQuestion({
+          question: 'Coffee vs Tea',
+          left: 'Coffee',
+          right: 'Tea'
+        });
+      }
+    } else {
+      // Fallback if no user preferences available
+      setDailyQuestion({
+        question: 'Coffee vs Tea',
+        left: 'Coffee',
+        right: 'Tea'
+      });
+    }
+  };
+
   const newDay = () => {
     setShowResults(false);
     setFinalResults(null);
-    // Show percentages (handled in admin), then pick new question
-    // For now, cycle through some questions
-    const questions = [
-      { question: 'Coffee vs Tea', left: 'Coffee', right: 'Tea' },
-      { question: 'Pizza vs Burgers', left: 'Pizza', right: 'Burgers' },
-      { question: 'Vim vs Emacs', left: 'Vim', right: 'Emacs' },
-    ];
-    const currentIndex = dailyQuestion ? questions.findIndex(q => q.question === dailyQuestion.question) : -1;
-    const nextIndex = (currentIndex + 1) % questions.length;
-    setDailyQuestion(questions[nextIndex]);
+    initializeDailyQuestion();
     setVotes({ left: 0, right: 0 }); // Reset votes for new day
+    setUserVote(null); // Reset user vote
   };
 
   // RSVP persistence logic
@@ -218,6 +267,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     loadMockData();
   }, []);
+
+  // Initialize daily question when current user is set
+  useEffect(() => {
+    if (currentUser) {
+      initializeDailyQuestion();
+    }
+  }, [currentUser]);
 
   return (
     <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, finalResults, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent }}>

@@ -279,63 +279,6 @@ export function calculateMatchScore(currentUser: UserType, selectedUser: UserTyp
   return Math.round(calculateSimilarity(currentUser, selectedUser) * 100);
 }
 
-// Pulsing orb component that cycles through colors
-function PulsingOrb() {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
-  
-  useFrame(({ clock }) => {
-    const time = clock.getElapsedTime();
-    
-    // Pulsing scale animation
-    if (meshRef.current) {
-      const scale = 2 + Math.sin(time * 2) * 0.3;
-      meshRef.current.scale.set(scale, scale, scale);
-    }
-    
-    // Color cycling: blue -> purple -> pink -> blue
-    if (materialRef.current) {
-      const colorTime = (time * 0.5) % 3; // 3 second cycle
-      let color;
-      
-      if (colorTime < 1) {
-        // Blue to Purple
-        const t = colorTime;
-        color = new THREE.Color().setRGB(
-          0.2 + t * 0.4, // R: 0.2 -> 0.6
-          0.4 - t * 0.15, // G: 0.4 -> 0.25
-          0.9 - t * 0.15  // B: 0.9 -> 0.75
-        );
-      } else if (colorTime < 2) {
-        // Purple to Pink
-        const t = colorTime - 1;
-        color = new THREE.Color().setRGB(
-          0.6 + t * 0.3, // R: 0.6 -> 0.9
-          0.25 + t * 0.15, // G: 0.25 -> 0.4
-          0.75 - t * 0.15  // B: 0.75 -> 0.6
-        );
-      } else {
-        // Pink to Blue
-        const t = colorTime - 2;
-        color = new THREE.Color().setRGB(
-          0.9 - t * 0.7, // R: 0.9 -> 0.2
-          0.4, // G: stays 0.4
-          0.6 + t * 0.3  // B: 0.6 -> 0.9
-        );
-      }
-      
-      materialRef.current.color = color;
-    }
-  });
-  
-  return (
-    <mesh ref={meshRef} position={[0, 0, 0]}>
-      <sphereGeometry args={[1, 32, 32]} />
-      <meshBasicMaterial ref={materialRef} transparent opacity={0.8} />
-    </mesh>
-  );
-}
-
 // Twinkling Star Component with animated pulse effect
 function TwinklingStar({ 
   node, 
@@ -391,39 +334,6 @@ function TwinklingStar({
   );
 }
 
-// Cluster Label Component - displays above each cluster
-function ClusterLabel({ cluster }: { cluster: Cluster }) {
-  const groupRef = useRef<THREE.Group>(null);
-  
-  // Gentle floating animation for the label
-  useFrame(({ clock }) => {
-    if (groupRef.current) {
-      const time = clock.getElapsedTime();
-      groupRef.current.position.y = cluster.center.y + 3 + Math.sin(time * 0.5) * 0.2;
-    }
-  });
-
-  // Don't show labels for solo clusters
-  if (cluster.users.length <= 1) return null;
-
-  return (
-    <group ref={groupRef} position={[cluster.center.x, cluster.center.y + 3, cluster.center.z]}>
-      <Billboard follow={true}>
-        <mesh>
-          <planeGeometry args={[cluster.label.length * 0.35, 0.8]} />
-          <meshBasicMaterial color="#1a1a2e" transparent opacity={0.85} />
-        </mesh>
-      </Billboard>
-      <Billboard follow={true} position={[0, 0, 0.01]}>
-        <mesh>
-          <planeGeometry args={[cluster.label.length * 0.32, 0.6]} />
-          <meshBasicMaterial color="#FFD700" transparent opacity={0.9} />
-        </mesh>
-      </Billboard>
-    </group>
-  );
-}
-
 export function GalaxyField({ 
   onSelect,
   users
@@ -464,11 +374,6 @@ export function GalaxyField({
         onSelect(null);
       }}
     >
-      {/* Cluster Labels */}
-      {clusters.map((cluster) => (
-        <ClusterLabel key={`cluster-label-${cluster.id}`} cluster={cluster} />
-      ))}
-
       {/* Draw lines from current user to mutuals (friends) */}
       {currentUserNode && mutualNodes.map((node, idx) => (
         <line key={"mutual-" + node.user.id}>
@@ -567,15 +472,11 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
             <OrbitControls 
               makeDefault 
               enablePan={false} 
-              enableZoom={true} 
+              enableZoom={false} // Disabled - pinch-to-zoom causes errors in React Native
               enableRotate={true} 
               rotateSpeed={2.0}
-              zoomSpeed={0.5}
-              minDistance={15}
-              maxDistance={50}
               target={[0, 3, 0]} // move target up by 3 units
             />
-            <PulsingOrb />
             <GalaxyField onSelect={setSelectedUser} users={users} />
           </Canvas>
         </Suspense>

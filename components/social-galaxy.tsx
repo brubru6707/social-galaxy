@@ -305,7 +305,7 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
               enablePan={false} 
               enableZoom={true} 
               enableRotate={true} 
-              rotateSpeed={0.5}
+              rotateSpeed={2.0}
               zoomSpeed={0.5}
               minDistance={15}
               maxDistance={50}

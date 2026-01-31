@@ -7,6 +7,7 @@ interface ConfettiProps {
   active: boolean;
   duration?: number;
   count?: number;
+  emoji?: string;
 }
 
 interface ConfettiPiece {
@@ -17,11 +18,12 @@ interface ConfettiPiece {
   color: string;
   size: number;
   finalX: number;
+  isEmoji?: boolean;
 }
 
 const COLORS = ['#FF5CB3', '#4455aa', '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
 
-const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000, count = 50 }) => {
+const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000, count = 50, emoji }) => {
   const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -29,7 +31,10 @@ const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000, count = 50
     if (active) {
       // Generate confetti pieces
       const newPieces: ConfettiPiece[] = [];
-      for (let i = 0; i < count; i++) {
+      const emojiCount = emoji ? Math.floor(count * 0.5) : 0; // 50% emoji if provided
+      const confettiCount = count - emojiCount;
+      
+      for (let i = 0; i < confettiCount; i++) {
         const startX = Math.random() * width;
         const finalX = startX + (Math.random() - 0.5) * 200;
         newPieces.push({
@@ -40,6 +45,23 @@ const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000, count = 50
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
           size: Math.random() * 10 + 5,
           finalX,
+          isEmoji: false,
+        });
+      }
+      
+      // Add emoji pieces if emoji is provided
+      for (let i = 0; i < emojiCount; i++) {
+        const startX = Math.random() * width;
+        const finalX = startX + (Math.random() - 0.5) * 200;
+        newPieces.push({
+          id: confettiCount + i,
+          x: new Animated.Value(startX),
+          y: new Animated.Value(-50),
+          rotation: new Animated.Value(0),
+          color: '',
+          size: 30 + Math.random() * 20,
+          finalX,
+          isEmoji: true,
         });
       }
       setPieces(newPieces);
@@ -92,24 +114,44 @@ const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000, count = 50
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {pieces.map((piece) => (
-        <Animated.View
-          key={piece.id}
-          style={{
-            position: 'absolute',
-            width: piece.size,
-            height: piece.size,
-            backgroundColor: piece.color,
-            borderRadius: piece.size / 2,
-            transform: [
-              { translateX: piece.x },
-              { translateY: piece.y },
-              { rotate: piece.rotation.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0deg', '360deg'],
-              })},
-            ],
-          }}
-        />
+        piece.isEmoji ? (
+          <Animated.Text
+            key={piece.id}
+            style={{
+              position: 'absolute',
+              fontSize: piece.size,
+              transform: [
+                { translateX: piece.x },
+                { translateY: piece.y },
+                { rotate: piece.rotation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                })},
+              ],
+            }}
+          >
+            {emoji}
+          </Animated.Text>
+        ) : (
+          <Animated.View
+            key={piece.id}
+            style={{
+              position: 'absolute',
+              width: piece.size,
+              height: piece.size,
+              backgroundColor: piece.color,
+              borderRadius: piece.size / 2,
+              transform: [
+                { translateX: piece.x },
+                { translateY: piece.y },
+                { rotate: piece.rotation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                })},
+              ],
+            }}
+          />
+        )
       ))}
     </View>
   );

@@ -1,6 +1,8 @@
 import { useUser } from '@/contexts/UserContext';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import stickers from '../assets/stickers.json';
+import Confetti from './Confetti';
 import EventQuestionModal from './event-question-modal';
 import HotTakeResults from './hot-take-results';
 
@@ -28,10 +30,24 @@ export default function EventDetails({ event }: EventDetailsProps) {
   const [goingPressed, setGoingPressed] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [answered, setAnswered] = useState(false);
+  const [userAnswer, setUserAnswer] = useState<'left' | 'right' | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Check if this event has been ended by admin
   const eventResult = endedEvents[event.id];
   const eventEnded = !!eventResult;
+
+  // Show confetti when event ends if user is on winning side
+  useEffect(() => {
+    if (eventEnded && eventResult && userAnswer) {
+      const userWon = (userAnswer === 'left' && eventResult.leftPercent >= 50) || 
+                       (userAnswer === 'right' && eventResult.rightPercent >= 50);
+      if (userWon) {
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 4000);
+      }
+    }
+  }, [eventEnded, eventResult, userAnswer]);
 
   // Show modal only if user is not already attending and hasn't answered yet
   const handleGoingPress = () => {
@@ -44,13 +60,23 @@ export default function EventDetails({ event }: EventDetailsProps) {
   const handleAnswer = (answer: string) => {
     setShowQuestionModal(false);
     setAnswered(true);
+    setUserAnswer(answer as 'left' | 'right');
     if (currentUser && !isUserAttending) {
       rsvpToEvent(event.id);
     }
   };
 
+  // Determine winning emoji for confetti
+  const getWinningEmoji = () => {
+    if (!userAnswer || !eventResult) return undefined;
+    
+    const winningOption = userAnswer === 'left' ? dailyQuestion?.left : dailyQuestion?.right;
+    return stickers[winningOption as keyof typeof stickers] || '🎉';
+  };
+
   return (
     <ScrollView contentContainerStyle={[styles.container, (isUserAttending || goingPressed) && styles.darkerBg]}>
+      <Confetti active={showConfetti} emoji={getWinningEmoji()} />
       {event.event_picture && (
         <Image source={{ uri: event.event_picture }} style={styles.image} />
       )}

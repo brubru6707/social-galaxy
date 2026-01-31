@@ -14,6 +14,7 @@ import {
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
+import stickers from '../../assets/stickers.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 import Confetti from '../../components/Confetti';
 import EventDetails from '../../components/event-details';
@@ -76,6 +77,7 @@ export default function HomeScreen() {
   const [activePage, setActivePage] = useState(0); // 0: Event, 1: Lobby
   const [showGalaxy, setShowGalaxy] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [userAnswer, setUserAnswer] = useState<'left' | 'right' | null>(null);
 
   // Reset percentages and animations when results are hidden
   useEffect(() => {
@@ -85,6 +87,7 @@ export default function HomeScreen() {
       leftAnim.setValue(0);
       rightAnim.setValue(0);
       setShowConfetti(false);
+      setUserAnswer(null);
     }
   }, [showResults, leftAnim, rightAnim]);
 
@@ -129,6 +132,19 @@ export default function HomeScreen() {
       });
     }
   }, [answeredHotTake, showResults, leftAnim, rightAnim, finalLeftPercent, finalRightPercent]);
+
+  // Determine winning emoji for confetti
+  const getWinningEmoji = () => {
+    if (!userAnswer || finalLeftPercent === 0) return undefined;
+    
+    const userWon = (userAnswer === 'left' && finalLeftPercent >= 50) || 
+                     (userAnswer === 'right' && finalRightPercent >= 50);
+    
+    if (!userWon) return undefined;
+    
+    const winningOption = userAnswer === 'left' ? option1 : option2;
+    return stickers[winningOption as keyof typeof stickers] || '🎉';
+  };
 
   const questionText = dailyQuestion ? dailyQuestion.question : '';
   const option1 = dailyQuestion ? dailyQuestion.left : '';
@@ -300,6 +316,7 @@ export default function HomeScreen() {
           onSelect={(answer) => {
             setShowModal(false);
             setAnsweredHotTake(questionText);
+            setUserAnswer(answer);
             addVote(answer);
           }}
           onClose={() => setShowModal(false)}
@@ -366,7 +383,7 @@ export default function HomeScreen() {
 
           </ScrollView>
         </SafeAreaView>
-        <Confetti active={showConfetti} />
+        <Confetti active={showConfetti} emoji={getWinningEmoji()} />
       </>
 }
     </>

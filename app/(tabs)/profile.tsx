@@ -1,12 +1,12 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import DraggableStickerEmoji from '@/components/Profile/DraggableStickerEmoji';
+import ProfileInfo from '@/components/Profile/ProfileInfo';
 import { useUser } from '@/contexts/UserContext';
 import * as Sharing from 'expo-sharing';
 import React, { useRef, useState } from 'react';
-import { Animated, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { Animated, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
-import stickers from '../../assets/stickers.json';
+import stickersData from '../../assets/stickers.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 
 export default function ProfileScreen() {
@@ -33,10 +33,12 @@ export default function ProfileScreen() {
     });
   }, [emojiPositions]);
 
-  // Function to get emoji based on answer
-  const getAnswerEmoji = (answer: string) => {
-    return stickers[answer] || '⭐';
-  };
+    // Stickers with index signature for type safety
+    const stickers: Record<string, string> = stickersData;
+    // Function to get emoji based on answer
+    const getAnswerEmoji = (answer: string) => {
+      return stickers[answer] || '⭐';
+    };
 
   // Get or create animated values for emoji at index
   const getEmojiAnim = (index: number) => {
@@ -58,12 +60,38 @@ export default function ProfileScreen() {
     lastName: '',
     profile_picture: currentUser?.profile_picture || "https://i.pravatar.cc/300?u='USER'",
     dateJoined: currentUser?.dob || 'Unknown',
-    mutuals: currentUser?.events_gone_to?.length || 0,
+    mutuals: currentUser?.mutuals?.length || 0,
     bio: currentUser?.bio || 'No bio available',
     hotTakes: currentUser?.hot_take_answers?.map((take: any) => ({
       question: take.question_text || 'Unknown question',
       answer: take.answer ?? take.selected_option ?? 'No answer'
     })) || [],
+  };
+
+
+  // Share and Edit handlers
+  const handleShare = async () => {
+    try {
+      const uri = await captureRef(rootCaptureRef, {
+        format: 'png',
+        quality: 1,
+      });
+      if (Platform.OS === 'web') {
+        const link = document.createElement('a');
+        link.href = uri;
+        link.download = 'profile.png';
+        link.click();
+      } else {
+        await Sharing.shareAsync(uri);
+      }
+    } catch (e) {
+      alert('Failed to share profile: ' + e);
+    }
+  };
+
+  const handleEdit = () => {
+    // TODO: Implement edit profile navigation/modal
+    alert('Edit Profile feature coming soon!');
   };
 
   return (
@@ -74,70 +102,8 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Everything above Hot Takes */}
-        <View collapsable={false} style={{backgroundColor: 'transparent'}}>
-          <View style={styles.profileContainer}>
-            {/* Gear Icon at top right */}
-            <TouchableOpacity style={styles.gearButton}>
-              <IconSymbol size={24} name="gear" color="#fff" />
-            </TouchableOpacity>
-
-            {/* Profile Picture */}
-            <View style={styles.profilePictureContainer}>
-              <Image source={{ uri: userData.profile_picture }} style={styles.profilePicture} />
-            </View>
-
-            {/* Name */}
-            <View style={styles.nameContainer}>
-              <Text style={styles.firstName}>{userData.firstName}</Text>
-              <Text style={styles.lastName}>{userData.lastName}</Text>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.editButton}>
-                <Text style={styles.editButtonText}>Edit Profile</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.shareButton} onPress={async () => {
-                try {
-                  const uri = await captureRef(rootCaptureRef, {
-                    format: 'png',
-                    quality: 1,
-                  });
-                  if (Platform.OS === 'web') {
-                    const link = document.createElement('a');
-                    link.href = uri;
-                    link.download = 'profile.png';
-                    link.click();
-                  } else {
-                    await Sharing.shareAsync(uri);
-                  }
-                } catch (e) {
-                  alert('Failed to share profile: ' + e);
-                }
-              }}>
-                <Text style={styles.shareButtonText}>Share Profile</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Date Joined and Mutuals */}
-            <View style={styles.infoContainer}>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Joined</Text>
-                <Text style={styles.infoValue}>{userData.dateJoined}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Mutuals</Text>
-                <Text style={styles.infoValue}>{userData.mutuals}</Text>
-              </View>
-            </View>
-
-            {/* Bio Section */}
-            <View style={styles.bioContainer}>
-              <Text style={styles.bio}>{userData.bio}</Text>
-            </View>
-          </View>
-        </View>
+        {/* Profile Info Section (modularized) */}
+        <ProfileInfo userData={userData} onShare={handleShare} onEdit={handleEdit} />
 
         {/* Hot Take Questions */}
         <View style={styles.hotTakesContainer}>
@@ -149,78 +115,13 @@ export default function ProfileScreen() {
                 <Text style={styles.hotTakeQuestion}>{take.question}</Text>
                 <View style={styles.hotTakeAnswerContainer}>
                   <Text style={styles.hotTakeAnswer}>{take.answer}</Text>
-                  <PanGestureHandler
-                    minDurationMs={500} // Require long press to activate drag
-                    activeOffsetX={[-10, 10]}
-                    activeOffsetY={[-10, 10]}
-                    simultaneousHandlers={[]}
-                      onGestureEvent={Animated.event(
-                        [],
-                        {
-                          useNativeDriver: false,
-                          listener: (event) => {
-                            console.log(`[DEBUG] Emoji ${index} gesture - translationX: ${event.nativeEvent.translationX}, translationY: ${event.nativeEvent.translationY}`);
-                            const startPos = gestureStartPositions.current[index] || { x: 0, y: 0 };
-                            console.log(`[DEBUG] Emoji ${index} using startPos x: ${startPos.x}, y: ${startPos.y}`);
-                            const anim = getEmojiAnim(index);
-                            // Update animated values based on start position + current translation
-                            anim.translateX.setValue(startPos.x + event.nativeEvent.translationX);
-                            anim.translateY.setValue(startPos.y + event.nativeEvent.translationY);
-                            // Also update state for persistence
-                            setEmojiPositions(prev => ({
-                              ...prev,
-                              [index]: {
-                                x: startPos.x + event.nativeEvent.translationX,
-                                y: startPos.y + event.nativeEvent.translationY,
-                              }
-                            }));
-                          }
-                        }
-                      )}
-                      onHandlerStateChange={(event) => {
-                        console.log(`[DEBUG] Emoji ${index} state change - state: ${event.nativeEvent.state}`);
-                        if (event.nativeEvent.state === State.BEGAN) {
-                          console.log(`[DEBUG] Emoji ${index} drag BEGAN - current position x: ${getEmojiAnim(index).translateX._value}, y: ${getEmojiAnim(index).translateY._value}`);
-                          // Store the current position as the gesture start position
-                          gestureStartPositions.current[index] = {
-                            x: getEmojiAnim(index).translateX._value,
-                            y: getEmojiAnim(index).translateY._value,
-                          };
-                          console.log(`[DEBUG] Emoji ${index} gesture start position set to x: ${gestureStartPositions.current[index].x}, y: ${gestureStartPositions.current[index].y}`);
-                          Animated.spring(getEmojiAnim(index).scale, {
-                            toValue: 1.5,
-                            useNativeDriver: false,
-                          }).start();
-                        } else if (
-                          event.nativeEvent.state === State.END ||
-                          event.nativeEvent.state === State.CANCELLED ||
-                          event.nativeEvent.state === State.FAILED
-                        ) {
-                          console.log(`[DEBUG] Emoji ${index} drag ENDED - final position x: ${getEmojiAnim(index).translateX._value}, y: ${getEmojiAnim(index).translateY._value}`);
-                          Animated.spring(getEmojiAnim(index).scale, {
-                            toValue: 1,
-                            useNativeDriver: false,
-                          }).start();
-                        }
-                      }}
-                  >
-                    <Animated.View
-                      style={[
-                        styles.draggableEmoji,
-                        {
-                          transform: [
-                            { translateX: getEmojiAnim(index).translateX },
-                            { translateY: getEmojiAnim(index).translateY },
-                            { scale: getEmojiAnim(index).scale }
-                          ],
-                          zIndex: 9999,
-                          elevation: 9999,
-                        }
-                      ]}
-                    >
-                      <Text style={styles.stickerEmoji}>{getAnswerEmoji(take.answer)}</Text>
-                    </Animated.View>
-                  </PanGestureHandler>
+                  <DraggableStickerEmoji
+                    index={index}
+                    emojiAnim={emojiAnim}
+                    getAnswerEmoji={() => getAnswerEmoji(take.answer)}
+                    gestureStartPositions={gestureStartPositions}
+                    setEmojiPositions={setEmojiPositions}
+                  />
                 </View>
               </View>
             );
@@ -368,8 +269,21 @@ const styles = StyleSheet.create({
   draggableEmoji: {
     // No absolute positioning, allow dragging in place
   },
-  stickerEmoji: {
-    fontSize: 30,
-    marginLeft: 10,
-  },
+stickerEmoji: {
+  fontSize: 30,
+  marginLeft: 10,
+  // The 'textShadow' acts as the immediate "rim" light
+  textShadowColor: '#FFFFFF', 
+  textShadowOffset: { width: 0, height: 0 },
+  textShadowRadius: 4, 
+  
+  // The 'shadow' properties act as the outer environmental glow
+  shadowColor: '#474643ff', 
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 1,
+  shadowRadius: 12, 
+  
+  // Optional: In SPM, shiny objects often looked slightly "raised"
+  elevation: 10, 
+},
 });

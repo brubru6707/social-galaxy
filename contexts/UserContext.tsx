@@ -8,8 +8,9 @@ export interface User {
   bio: string;
   dob: string;
   profile_picture: string;
-  events_gone_to: string[];
-  hot_take_answers: any[]; // You can type this more specifically if needed
+  events_gone_to: any[];
+  hot_take_answers: any[];
+  mutuals?: any[]; // Add mutuals property for compatibility with mock_data.json
   // Add other fields as they appear in your data
 }
 

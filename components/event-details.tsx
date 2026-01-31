@@ -88,18 +88,40 @@ export default function EventDetails({ event }: EventDetailsProps) {
         <Image source={{ uri: event.event_picture }} style={styles.image} />
       )}
       <Text style={styles.title}>{event.title}</Text>
-      
-      {/* Show results after event ends */}
-      {eventEnded && eventResult && (
-        <View style={{ marginTop: 16, marginBottom: 16, width: '100%' }}>
-          <HotTakeResults
-            leftOption={dailyQuestion?.left || 'Option 1'}
-            rightOption={dailyQuestion?.right || 'Option 2'}
-            leftPercent={eventResult.leftPercent}
-            rightPercent={eventResult.rightPercent}
-            animate={true}
-            showWrapper={true}
-          />
+
+      {/* Show user's answer/results under event name, like home page */}
+      {(userAnswer || answered) && (
+        <View style={{ width: '100%', alignItems: 'center', marginBottom: 8 }}>
+          <View style={{
+            width: '90%',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 2,
+            borderColor: '#FFD700',
+            borderRadius: 20,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            marginTop: 4,
+            backgroundColor: '#181818',
+          }}>
+            {eventEnded && eventResult ? (
+              <HotTakeResults
+                leftOption={dailyQuestion?.left || 'Option 1'}
+                rightOption={dailyQuestion?.right || 'Option 2'}
+                leftPercent={eventResult.leftPercent}
+                rightPercent={eventResult.rightPercent}
+                animate={true}
+                showWrapper={false}
+              />
+            ) : (
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 16, marginBottom: 2 }}>Your Answer</Text>
+                <Text style={{ color: '#fff', fontSize: 18 }}>
+                  {userAnswer === 'left' ? (dailyQuestion?.left || 'Option 1') : userAnswer === 'right' ? (dailyQuestion?.right || 'Option 2') : ''}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       )}
       

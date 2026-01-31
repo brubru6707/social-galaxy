@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
@@ -13,15 +13,6 @@ export default function AdminScreen() {
 
   const handleNewDay = () => {
     if (dailyQuestion) {
-      const total = votes.left + votes.right;
-      const leftPercent = total > 0 ? Math.round((votes.left / total) * 100) : 0;
-      const rightPercent = total > 0 ? Math.round((votes.right / total) * 100) : 0;
-      Alert.alert(
-        'Day Results',
-        `${dailyQuestion.left}: ${leftPercent}%\n${dailyQuestion.right}: ${rightPercent}%`,
-        [{ text: 'OK', onPress: () => { newDay(); } }]
-      );
-    } else {
       newDay();
     }
   };

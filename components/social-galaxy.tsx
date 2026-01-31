@@ -1,6 +1,6 @@
 import { Billboard, OrbitControls, useTexture } from '@react-three/drei/native';
-import { Canvas } from '@react-three/fiber';
-import React, { Suspense, useMemo, useState } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import React, { Suspense, useMemo, useRef, useState } from 'react';
 import { Image, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as THREE from 'three';
@@ -214,6 +214,63 @@ export function calculateMatchScore(currentUser: UserType, selectedUser: UserTyp
   return Math.round(calculateSimilarity(currentUser, selectedUser) * 100);
 }
 
+// Pulsing orb component that cycles through colors
+function PulsingOrb() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+  
+  useFrame(({ clock }) => {
+    const time = clock.getElapsedTime();
+    
+    // Pulsing scale animation
+    if (meshRef.current) {
+      const scale = 2 + Math.sin(time * 2) * 0.3;
+      meshRef.current.scale.set(scale, scale, scale);
+    }
+    
+    // Color cycling: blue -> purple -> pink -> blue
+    if (materialRef.current) {
+      const colorTime = (time * 0.5) % 3; // 3 second cycle
+      let color;
+      
+      if (colorTime < 1) {
+        // Blue to Purple
+        const t = colorTime;
+        color = new THREE.Color().setRGB(
+          0.2 + t * 0.4, // R: 0.2 -> 0.6
+          0.4 - t * 0.15, // G: 0.4 -> 0.25
+          0.9 - t * 0.15  // B: 0.9 -> 0.75
+        );
+      } else if (colorTime < 2) {
+        // Purple to Pink
+        const t = colorTime - 1;
+        color = new THREE.Color().setRGB(
+          0.6 + t * 0.3, // R: 0.6 -> 0.9
+          0.25 + t * 0.15, // G: 0.25 -> 0.4
+          0.75 - t * 0.15  // B: 0.75 -> 0.6
+        );
+      } else {
+        // Pink to Blue
+        const t = colorTime - 2;
+        color = new THREE.Color().setRGB(
+          0.9 - t * 0.7, // R: 0.9 -> 0.2
+          0.4, // G: stays 0.4
+          0.6 + t * 0.3  // B: 0.6 -> 0.9
+        );
+      }
+      
+      materialRef.current.color = color;
+    }
+  });
+  
+  return (
+    <mesh ref={meshRef} position={[0, 0, 0]}>
+      <sphereGeometry args={[1, 32, 32]} />
+      <meshBasicMaterial ref={materialRef} transparent opacity={0.8} />
+    </mesh>
+  );
+}
+
 export function GalaxyField({ 
   onSelect,
   users
@@ -319,7 +376,7 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
         <Suspense fallback={<Text style={{ color: 'white', textAlign: 'center', marginTop: 100 }}>Loading galaxy...</Text>}>
           <Canvas 
             camera={{ 
-              position: [0, 0, 30], 
+              position: [0, 3, 30], // move camera up by 3 units
               fov: 75,
               near: 0.1,
               far: 1000
@@ -337,8 +394,9 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
               zoomSpeed={0.5}
               minDistance={15}
               maxDistance={50}
-              target={[0, 0, 0]}
+              target={[0, 3, 0]} // move target up by 3 units
             />
+            <PulsingOrb />
             <GalaxyField onSelect={setSelectedUser} users={users} />
           </Canvas>
         </Suspense>

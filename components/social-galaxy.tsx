@@ -1,7 +1,7 @@
 import { Billboard, OrbitControls, useTexture } from '@react-three/drei/native';
 import { Canvas, useFrame } from '@react-three/fiber';
 import React, { Suspense, useMemo, useRef, useState } from 'react';
-import { Image, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as THREE from 'three';
 import mockData from '../assets/mock_data.json';
@@ -34,7 +34,64 @@ type Cluster = {
   id: number;
   users: UserType[];
   center: THREE.Vector3;
+  label: string;
 };
+
+// Generate a label for a cluster based on the most common shared answer
+function generateClusterLabel(users: UserType[]): string {
+  if (users.length <= 1) return "Solo Explorer";
+  
+  // Count all answers across users in this cluster
+  const answerCounts = new Map<string, number>();
+  
+  users.forEach(user => {
+    const answers = user.hot_take_answers || [];
+    answers.forEach((a: any) => {
+      const val = a.answer ?? a.selected_option;
+      if (val) {
+        answerCounts.set(val, (answerCounts.get(val) || 0) + 1);
+      }
+    });
+  });
+  
+  // Find the most common answer that most users share
+  let topAnswer = "";
+  let topCount = 0;
+  
+  answerCounts.forEach((count, answer) => {
+    // Only consider it a "shared trait" if at least half the cluster agrees
+    if (count > topCount && count >= Math.ceil(users.length / 2)) {
+      topCount = count;
+      topAnswer = answer;
+    }
+  });
+  
+  if (topAnswer) {
+    // Create fun labels based on the answer
+    const labelMap: { [key: string]: string } = {
+      'Coffee': '☕ Coffee Lovers',
+      'Tea': '🍵 Tea Fans',
+      'iOS': '🍎 iOS Squad',
+      'Android': '🤖 Android Gang',
+      'Minecraft': '⛏️ Minecraft Crew',
+      'Terraria': '🌳 Terraria Fans',
+      'Frontend': '🎨 Frontend Devs',
+      'Backend': '⚙️ Backend Wizards',
+      'Star Wars': '⭐ Star Wars Fans',
+      'Star Trek': '🖖 Trekkies',
+      'Tesla': '⚡ Tesla Fans',
+      'Gas Cars': '🚗 Car Enthusiasts',
+      'Morning': '🌅 Early Birds',
+      'Night': '🌙 Night Owls',
+      'Dogs': '🐕 Dog People',
+      'Cats': '🐈 Cat People',
+    };
+    
+    return labelMap[topAnswer] || `${topAnswer} Fans`;
+  }
+  
+  return "Mixed Vibes";
+}
 
 // Calculate similarity score between two users based on hot takes
 function calculateSimilarity(user1: UserType, user2: UserType): number {
@@ -131,7 +188,8 @@ function clusterUsers(users: UserType[]): Cluster[] {
       clusters.push({
         id: newClusterId,
         users: [rel.u1, rel.u2],
-        center
+        center,
+        label: '' // Will be computed after all users are assigned
       });
 
       assigned.add(rel.u1.id);
@@ -173,16 +231,22 @@ function clusterUsers(users: UserType[]): Cluster[] {
           r * Math.sin(phi) * Math.cos(theta),
           r * Math.sin(phi) * Math.sin(theta),
           r * Math.cos(phi)
-        )
+        ),
+        label: '' // Will be computed below
       });
     }
+  });
+
+  // 5. Generate labels for all clusters based on shared traits
+  clusters.forEach(cluster => {
+    cluster.label = generateClusterLabel(cluster.users);
   });
 
   return clusters;
 }
 
 // Generate data with clustering
-function generateGalaxyData(users: UserType[]): Node[] {
+function generateGalaxyData(users: UserType[]): { nodes: Node[], clusters: Cluster[] } {
   const clusters = clusterUsers(users);
   const nodes: Node[] = [];
 
@@ -206,7 +270,7 @@ function generateGalaxyData(users: UserType[]): Node[] {
       });
     });
   });
-  return nodes;
+  return { nodes, clusters };
 }
 
 // Calculate match percentage between current user and selected user
@@ -271,6 +335,94 @@ function PulsingOrb() {
   );
 }
 
+// Twinkling Star Component with animated pulse effect
+function TwinklingStar({ 
+  node, 
+  index, 
+  texture, 
+  isHovered, 
+  onClick,
+  circleGeometry
+}: { 
+  node: Node;
+  index: number;
+  texture: THREE.Texture;
+  isHovered: boolean;
+  onClick: () => void;
+  circleGeometry: THREE.CircleGeometry;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  // Each star gets a unique phase offset for varied twinkling
+  const phaseOffset = useMemo(() => Math.random() * Math.PI * 2, []);
+  const twinkleSpeed = useMemo(() => 1 + Math.random() * 2, []); // 1-3 speed variation
+  const pulseIntensity = useMemo(() => 0.15 + Math.random() * 0.15, []); // 0.15-0.3 intensity
+  
+  useFrame(({ clock }) => {
+    if (meshRef.current) {
+      const time = clock.getElapsedTime();
+      // Create smooth pulsing effect
+      const pulse = 1 + Math.sin(time * twinkleSpeed + phaseOffset) * pulseIntensity;
+      const baseScale = isHovered ? 2.4 : 2;
+      meshRef.current.scale.setScalar(baseScale * pulse);
+    }
+  });
+
+  return (
+    <Billboard
+      position={[node.x, node.y, node.z]}
+      follow={true}
+      lockX={false}
+      lockY={false}
+      lockZ={false}
+    >
+      <mesh
+        ref={meshRef}
+        geometry={circleGeometry}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+      >
+        <meshBasicMaterial map={texture} side={THREE.FrontSide} transparent />
+      </mesh>
+    </Billboard>
+  );
+}
+
+// Cluster Label Component - displays above each cluster
+function ClusterLabel({ cluster }: { cluster: Cluster }) {
+  const groupRef = useRef<THREE.Group>(null);
+  
+  // Gentle floating animation for the label
+  useFrame(({ clock }) => {
+    if (groupRef.current) {
+      const time = clock.getElapsedTime();
+      groupRef.current.position.y = cluster.center.y + 3 + Math.sin(time * 0.5) * 0.2;
+    }
+  });
+
+  // Don't show labels for solo clusters
+  if (cluster.users.length <= 1) return null;
+
+  return (
+    <group ref={groupRef} position={[cluster.center.x, cluster.center.y + 3, cluster.center.z]}>
+      <Billboard follow={true}>
+        <mesh>
+          <planeGeometry args={[cluster.label.length * 0.35, 0.8]} />
+          <meshBasicMaterial color="#1a1a2e" transparent opacity={0.85} />
+        </mesh>
+      </Billboard>
+      <Billboard follow={true} position={[0, 0, 0.01]}>
+        <mesh>
+          <planeGeometry args={[cluster.label.length * 0.32, 0.6]} />
+          <meshBasicMaterial color="#FFD700" transparent opacity={0.9} />
+        </mesh>
+      </Billboard>
+    </group>
+  );
+}
+
 export function GalaxyField({ 
   onSelect,
   users
@@ -278,10 +430,9 @@ export function GalaxyField({
   onSelect: (node: Node | null) => void;
   users: UserType[];
 }) {
-  // Generate nodes only once
-  const nodes = useMemo(() => {
-    const generatedNodes = generateGalaxyData(users);
-    return generatedNodes;
+  // Generate nodes and clusters only once
+  const { nodes, clusters } = useMemo(() => {
+    return generateGalaxyData(users);
   }, [users]);
 
   // Safety check - return early if no nodes
@@ -301,7 +452,7 @@ export function GalaxyField({
   const currentUserNode = nodes.find(n => n.user.id === currentUserId);
 
   // Get mutuals (friends) from the current user's mutuals attribute
-  const currentUserMutualIds = currentUserNode?.user.mutuals || [];
+  const currentUserMutualIds = (currentUserNode?.user as any).mutuals || [];
   // Find nodes for each mutual friend
   const mutualNodes = nodes.filter(n => currentUserMutualIds.includes(n.user.id));
 
@@ -312,6 +463,11 @@ export function GalaxyField({
         onSelect(null);
       }}
     >
+      {/* Cluster Labels */}
+      {clusters.map((cluster) => (
+        <ClusterLabel key={`cluster-label-${cluster.id}`} cluster={cluster} />
+      ))}
+
       {/* Draw lines from current user to mutuals (friends) */}
       {currentUserNode && mutualNodes.map((node, idx) => (
         <line key={"mutual-" + node.user.id}>
@@ -330,27 +486,20 @@ export function GalaxyField({
         </line>
       ))}
 
+      {/* Twinkling Stars */}
       {nodes.map((node, i) => (
-        <Billboard
+        <TwinklingStar
           key={i}
-          position={[node.x, node.y, node.z]}
-          follow={true}
-          lockX={false}
-          lockY={false}
-          lockZ={false}
-        >
-          <mesh
-            geometry={circleGeometry}
-            scale={i === hoveredId ? [2.4, 2.4, 1] : [2, 2, 1]}
-            onClick={(e) => {
-              e.stopPropagation();
-              setHoveredId(i);
-              onSelect(nodes[i]);
-            }}
-          >
-            <meshBasicMaterial map={textures[i]} side={THREE.FrontSide} transparent />
-          </mesh>
-        </Billboard>
+          node={node}
+          index={i}
+          texture={textures[i]}
+          isHovered={i === hoveredId}
+          circleGeometry={circleGeometry}
+          onClick={() => {
+            setHoveredId(i);
+            onSelect(nodes[i]);
+          }}
+        />
       ))}
     </group>
   );
@@ -361,6 +510,29 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
   const [selectedUser, setSelectedUser] = useState<Node | null>(null);
   const { width, height } = useWindowDimensions();
   const [showProfile, setShowProfile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // Filter users based on search query
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return users.filter(user => 
+      user.name.toLowerCase().includes(query)
+    ).slice(0, 5); // Limit to 5 results
+  }, [searchQuery, users]);
+
+  // Handle selecting a user from search results
+  const handleSearchSelect = (user: UserType) => {
+    // Create a temporary node to select (we'll find the actual node position)
+    const { nodes } = generateGalaxyData(users);
+    const matchingNode = nodes.find(n => n.user.id === user.id);
+    if (matchingNode) {
+      setSelectedUser(matchingNode);
+    }
+    setSearchQuery('');
+    setShowSearchResults(false);
+  };
 
   if (!users || users.length === 0) {
     return (
@@ -403,7 +575,68 @@ export function SocialGalaxy({ users }: { users: UserType[] }) {
       </View>
 
       <SafeAreaView style={styles.hudContainer} pointerEvents="box-none">
-        <Text style={styles.header}>SOCIAL GALAXY</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>SOCIAL GALAXY</Text>
+          
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search people..."
+              placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+                setShowSearchResults(text.length > 0);
+              }}
+              onFocus={() => setShowSearchResults(searchQuery.length > 0)}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity 
+                style={styles.clearButton}
+                onPress={() => {
+                  setSearchQuery('');
+                  setShowSearchResults(false);
+                }}
+              >
+                <Text style={styles.clearButtonText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* Search Results Dropdown */}
+          {showSearchResults && searchResults.length > 0 && (
+            <View style={styles.searchResults}>
+              <ScrollView keyboardShouldPersistTaps="handled">
+                {searchResults.map((user) => (
+                  <TouchableOpacity
+                    key={user.id}
+                    style={styles.searchResultItem}
+                    onPress={() => handleSearchSelect(user)}
+                  >
+                    <Image 
+                      source={{ uri: user.profile_picture }} 
+                      style={styles.searchResultImage} 
+                    />
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName}>{user.name}</Text>
+                      <Text style={styles.searchResultBio} numberOfLines={1}>
+                        {user.bio}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+          
+          {/* No results message */}
+          {showSearchResults && searchQuery.length > 0 && searchResults.length === 0 && (
+            <View style={styles.searchResults}>
+              <Text style={styles.noResultsText}>No people found</Text>
+            </View>
+          )}
+        </View>
         
         {selectedUser ? (
           <>
@@ -455,6 +688,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   canvasLayer: { position: 'absolute', top: 0, left: 0, zIndex: 1 },
   hudContainer: { flex: 1, justifyContent: 'space-between', alignItems: 'center', padding: 20, zIndex: 2 },
+  headerContainer: { width: '100%', alignItems: 'center' },
   header: { color: 'white', fontSize: 22, fontWeight: '900', letterSpacing: 2, marginTop: 10 },
   card: { backgroundColor: 'rgba(30, 30, 40, 0.95)', padding: 24, borderRadius: 20, width: '85%', alignItems: 'center', borderWidth: 1, borderColor: '#444' },
   profileImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 10 },
@@ -465,4 +699,70 @@ const styles = StyleSheet.create({
   buttonText: { color: 'white', fontWeight: '600', fontSize: 16 },
   hint: { padding: 12, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20, marginBottom: 20 },
   hintText: { color: '#ccc', fontSize: 14 },
+  // Search styles
+  searchContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(30, 30, 40, 0.95)', 
+    borderRadius: 12, 
+    marginTop: 12,
+    paddingHorizontal: 12,
+    width: '90%',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  searchInput: { 
+    flex: 1, 
+    color: 'white', 
+    fontSize: 16, 
+    paddingVertical: 10,
+  },
+  clearButton: {
+    padding: 6,
+  },
+  clearButtonText: {
+    color: '#888',
+    fontSize: 16,
+  },
+  searchResults: {
+    backgroundColor: 'rgba(30, 30, 40, 0.98)',
+    borderRadius: 12,
+    marginTop: 8,
+    width: '90%',
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  searchResultImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  searchResultBio: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  noResultsText: {
+    color: '#888',
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 16,
+  },
 });

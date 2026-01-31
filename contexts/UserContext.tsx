@@ -38,6 +38,7 @@ interface UserContextType {
   rsvpToEvent: (eventId: string) => void;
   endedEvents: Record<string, { leftPercent: number; rightPercent: number }>;
   endEvent: (eventId: string) => void;
+  addHotTakeAnswer: (questionText: string, selectedOption: string, questionId?: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -312,6 +313,40 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // Add hot take answer to user's profile
+  const addHotTakeAnswer = (questionText: string, selectedOption: string, questionId?: string) => {
+    if (!currentUser) return;
+
+    const newAnswer = {
+      question_id: questionId || `q_claimed_${Date.now()}`,
+      type: 'regular',
+      question_text: questionText,
+      selected_option: selectedOption,
+      answer: selectedOption
+    };
+
+    setCurrentUser(prevUser => {
+      if (!prevUser) return prevUser;
+      return {
+        ...prevUser,
+        hot_take_answers: [...prevUser.hot_take_answers, newAnswer]
+      };
+    });
+
+    // Also update in allUsers
+    setAllUsers(prevUsers => {
+      return prevUsers.map(user => {
+        if (user.id === currentUser?.id) {
+          return {
+            ...user,
+            hot_take_answers: [...user.hot_take_answers, newAnswer]
+          };
+        }
+        return user;
+      });
+    });
+  };
+
   useEffect(() => {
     // Load mock data
     const loadMockData = async () => {
@@ -335,15 +370,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadMockData();
   }, []);
 
-  // Initialize daily question when current user is set
+  // Initialize daily question when current user is set (ONLY ON FIRST LOAD)
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !dailyQuestion) {
       initializeDailyQuestion();
     }
   }, [currentUser]);
 
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, finalResults, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent }}>
+    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, finalResults, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent, addHotTakeAnswer }}>
       {children}
     </UserContext.Provider>
   );

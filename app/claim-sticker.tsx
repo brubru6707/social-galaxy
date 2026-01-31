@@ -1,17 +1,27 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import stickers from '../assets/stickers.json';
 import AnimatedLiquidGradient from '../components/AnimatedLiquidGradient';
+import { useUser } from '../contexts/UserContext';
 
 export default function ClaimStampScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { userChoice, leftOption, rightOption } = params;
+  const { addHotTakeAnswer, dailyQuestion } = useUser();
 
   // Get the sticker emoji based on user's choice
   const chosenOption = userChoice === 'left' ? leftOption : rightOption;
   const stickerEmoji = stickers[chosenOption as keyof typeof stickers] || '🎉';
+
+  // Save the hot take answer when the component mounts
+  useEffect(() => {
+    if (dailyQuestion && chosenOption) {
+      const questionText = `${leftOption} vs ${rightOption}`;
+      addHotTakeAnswer(questionText, chosenOption as string);
+    }
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

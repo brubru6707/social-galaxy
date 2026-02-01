@@ -39,6 +39,14 @@ interface UserContextType {
   endedEvents: Record<string, { leftPercent: number; rightPercent: number }>;
   endEvent: (eventId: string) => void;
   addHotTakeAnswer: (questionText: string, selectedOption: string, questionId?: string) => void;
+  seenEventResults: Set<string>;
+  markEventResultsAsSeen: (eventId: string) => void;
+  hasSeenDailyResults: boolean;
+  markDailyResultsAsSeen: () => void;
+  eventAnswers: Record<string, 'left' | 'right'>;
+  setEventAnswer: (eventId: string, answer: 'left' | 'right') => void;
+  answeredHotTake: string | null;
+  setAnsweredHotTake: (val: string | null) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -61,6 +69,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [endedEvents, setEndedEvents] = useState<Record<string, { leftPercent: number; rightPercent: number }>>({});
   const [userVote, setUserVote] = useState<'left' | 'right' | null>(null);
   const [finalResults, setFinalResults] = useState<{ leftPercent: number; rightPercent: number } | null>(null);
+  const [seenEventResults, setSeenEventResults] = useState<Set<string>>(new Set());
+  const [hasSeenDailyResults, setHasSeenDailyResults] = useState(false);
+  const [eventAnswers, setEventAnswers] = useState<Record<string, 'left' | 'right'>>({});
+  const [answeredHotTake, setAnsweredHotTake] = useState<string | null>(null);
 
   // Setup notifications (only on native platforms)
   useEffect(() => {
@@ -223,7 +235,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let random = Math.random() * totalWeight;
       
       let selectedCategory = categories[0];
-      console.log("SELECTED CATEGORY", selectedCategory, preferences)
+      //console.log("SELECTED CATEGORY", selectedCategory, preferences)
       for (let i = 0; i < categories.length; i++) {
         random -= weights[i];
         if (random <= 0) {
@@ -247,7 +259,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (categoryQuestions.length > 0) {
         // Pick a random question from the selected category
         const randomQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
-        console.log("RANDOM QUESTION", randomQuestion);
+        // console.log("RANDOM QUESTION", randomQuestion);
         setDailyQuestion({
           question: randomQuestion.question_text,
           left: randomQuestion.option_1,
@@ -279,6 +291,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const newDay = () => {
     setShowResults(false);
     setFinalResults(null);
+    setHasSeenDailyResults(false); // Reset seen status for new day
     initializeDailyQuestion();
     setVotes({ left: 0, right: 0 }); // Reset votes for new day
     setUserVote(null); // Reset user vote
@@ -347,6 +360,28 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // Mark event results as seen
+  const markEventResultsAsSeen = (eventId: string) => {
+    setSeenEventResults(prev => {
+      const newSet = new Set(prev);
+      newSet.add(eventId);
+      return newSet;
+    });
+  };
+
+  // Mark daily results as seen
+  const markDailyResultsAsSeen = () => {
+    setHasSeenDailyResults(true);
+  };
+
+  // Store event answer
+  const setEventAnswer = (eventId: string, answer: 'left' | 'right') => {
+    setEventAnswers(prev => ({
+      ...prev,
+      [eventId]: answer
+    }));
+  };
+
   useEffect(() => {
     // Load mock data
     const loadMockData = async () => {
@@ -378,7 +413,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, finalResults, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent, addHotTakeAnswer }}>
+    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, finalResults, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent, addHotTakeAnswer, seenEventResults, markEventResultsAsSeen, hasSeenDailyResults, markDailyResultsAsSeen, eventAnswers, setEventAnswer, answeredHotTake, setAnsweredHotTake }}>
       {children}
     </UserContext.Provider>
   );

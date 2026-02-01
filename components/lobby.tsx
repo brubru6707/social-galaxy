@@ -1,6 +1,6 @@
 import { useUser } from '@/contexts/UserContext';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getNemesisAndBestie } from './lobby-match-utils';
 import { calculateMatchScore } from './social-galaxy';
@@ -19,8 +19,19 @@ export type UserType = {
 export function Lobby({ users, onClose }: { users: UserType[]; onClose: () => void }) {
   const { currentUser } = useUser();
   const { nemesis, bestie } = currentUser ? getNemesisAndBestie(currentUser, users) : { nemesis: null, bestie: null };
+  const [searchQuery, setSearchQuery] = useState('');
 
   console.log('Lobby rendering with users:', users.length);
+
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const query = searchQuery.toLowerCase();
+    return users.filter(user => 
+      user.name.toLowerCase().includes(query) ||
+      user.bio.toLowerCase().includes(query)
+    );
+  }, [searchQuery, users]);
 
   if (!users || users.length === 0) {
     return (
@@ -45,6 +56,30 @@ export function Lobby({ users, onClose }: { users: UserType[]; onClose: () => vo
           <Text style={styles.closeText}>X</Text>
         </TouchableOpacity>
       </View>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search people..."
+          placeholderTextColor="#888"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity 
+            style={styles.clearButton}
+            onPress={() => setSearchQuery('')}
+          >
+            <Text style={styles.clearButtonText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {/* Results count */}
+      {searchQuery.length > 0 && (
+        <Text style={styles.resultsCount}>
+          {filteredUsers.length} {filteredUsers.length === 1 ? 'result' : 'results'} found
+        </Text>
+      )}
       {/* Nemesis and Bestie Section */}
       <View style={styles.matchRow}>
         {nemesis && (
@@ -65,7 +100,7 @@ export function Lobby({ users, onClose }: { users: UserType[]; onClose: () => vo
         )}
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {users.map((user) => (
+        {filteredUsers.map((user) => (
           <View key={user.id} style={styles.userCard}>
             <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
             <View style={styles.userInfo}>
@@ -156,6 +191,36 @@ const styles = StyleSheet.create({
   stats: {
     fontSize: 12,
     color: '#FFD700',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 30, 40, 0.95)',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginVertical: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  searchInput: {
+    flex: 1,
+    color: 'white',
+    fontSize: 16,
+    paddingVertical: 10,
+  },
+  clearButton: {
+    padding: 6,
+  },
+  clearButtonText: {
+    color: '#888',
+    fontSize: 16,
+  },
+  resultsCount: {
+    color: '#FFD700',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
   },
   matchRow: {
     flexDirection: 'row',

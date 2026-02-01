@@ -1,6 +1,6 @@
 import { useUser } from '@/contexts/UserContext';
 import React, { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import stickers from '../assets/stickers.json';
 import Confetti from './Confetti';
 import EventQuestionModal from './event-question-modal';
@@ -19,23 +19,35 @@ export type EventDetailsProps = {
     maxAttendees?: number;
     event_picture?: string;
     attendees?: string[];
+    event_hot_take_question?: string;
+    event_hot_take_id?: string;
+    event_hot_take_option_1?: string;
+    event_hot_take_option_2?: string;
   };
 };
 
 
 
 export default function EventDetails({ event }: EventDetailsProps) {
-  const { currentUser, dailyQuestion, rsvpToEvent, endedEvents } = useUser();
+  const { currentUser, rsvpToEvent, endedEvents, seenEventResults, markEventResultsAsSeen, eventAnswers, setEventAnswer } = useUser();
   const isUserAttending = currentUser && currentUser.events_gone_to.includes(event.id);
   const [goingPressed, setGoingPressed] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [answered, setAnswered] = useState(false);
-  const [userAnswer, setUserAnswer] = useState<'left' | 'right' | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+
+  // Get user's answer from persistent storage
+  const userAnswer = eventAnswers[event.id] || null;
+
+  // Use event-specific hot take question
+  const eventQuestion = event.event_hot_take_question || 'Event Question';
+  const leftOption = event.event_hot_take_option_1 || 'Option 1';
+  const rightOption = event.event_hot_take_option_2 || 'Option 2';
 
   // Check if this event has been ended by admin
   const eventResult = endedEvents[event.id];
   const eventEnded = !!eventResult;
+  const hasSeenResults = seenEventResults.has(event.id);
 
   // Show confetti when event results appear and user won
   useEffect(() => {
@@ -67,7 +79,7 @@ export default function EventDetails({ event }: EventDetailsProps) {
   const handleAnswer = (answer: string) => {
     setShowQuestionModal(false);
     setAnswered(true);
-    setUserAnswer(answer as 'left' | 'right');
+    setEventAnswer(event.id, answer as 'left' | 'right'); // Save to persistent storage
     if (currentUser && !isUserAttending) {
       rsvpToEvent(event.id);
     }
@@ -77,56 +89,73 @@ export default function EventDetails({ event }: EventDetailsProps) {
   const getWinningEmoji = () => {
     if (!userAnswer || !eventResult) return undefined;
     
-    const winningOption = userAnswer === 'left' ? dailyQuestion?.left : dailyQuestion?.right;
+    const winningOption = userAnswer === 'left' ? leftOption : rightOption;
     return stickers[winningOption as keyof typeof stickers] || '🎉';
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, (isUserAttending || goingPressed) && styles.darkerBg]}>
-      <Confetti active={showConfetti} emoji={getWinningEmoji()} />
-      {event.event_picture && (
-        <Image source={{ uri: event.event_picture }} style={styles.image} />
+    <>
+      {/* Hot Take Results Modal - Full Screen like Home Page */}
+      {eventEnded && eventResult && !hasSeenResults && (
+        <Modal visible={true} transparent={false} animationType="fade" onRequestClose={() => markEventResultsAsSeen(event.id)}>
+          <HotTakeResults
+            leftOption={leftOption}
+            rightOption={rightOption}
+            leftPercent={eventResult.leftPercent}
+            rightPercent={eventResult.rightPercent}
+            animate={true}
+            onClose={() => {
+              console.log('[DEBUG EVENT-DETAILS] Closing results modal for navigation');
+              markEventResultsAsSeen(event.id);
+            }}
+            userWon={userAnswer ? (userAnswer === 'left' ? eventResult.leftPercent >= eventResult.rightPercent : eventResult.rightPercent >= eventResult.leftPercent) : true}
+            userChoice={userAnswer}
+          />
+        </Modal>
       )}
-      <Text style={styles.title}>{event.title}</Text>
+      
+      <ScrollView contentContainerStyle={[styles.container, (isUserAttending || goingPressed) && styles.darkerBg]}>
+        <Confetti active={showConfetti} emoji={getWinningEmoji()} />
+        {event.event_picture && (
+          <Image source={{ uri: event.event_picture }} style={styles.image} />
+        )}
+        <Text style={styles.title}>{event.title}</Text>
 
-      {/* Show user's answer/results under event name, like home page */}
-      {(userAnswer || answered) && (
-        <View style={{ width: '100%', alignItems: 'center', marginBottom: 8 }}>
-          <View style={{
-            width: '90%',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 2,
-            borderColor: '#FFD700',
-            borderRadius: 20,
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            marginTop: 4,
-            backgroundColor: '#181818',
-          }}>
-            {eventEnded && eventResult ? (
-              <HotTakeResults
-                leftOption={dailyQuestion?.left || 'Option 1'}
-                rightOption={dailyQuestion?.right || 'Option 2'}
-                leftPercent={eventResult.leftPercent}
-                rightPercent={eventResult.rightPercent}
-                animate={true}
-                showWrapper={false}
-              />
-            ) : (
+        {/* Show user's answer under event name (only when NOT showing full results) */}
+        {(userAnswer || answered) && !eventEnded && (
+          <View style={{ width: '100%', alignItems: 'center', marginBottom: 8 }}>
+            <View style={{
+              width: '90%',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 2,
+              borderColor: '#FFD700',
+              borderRadius: 20,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              marginTop: 4,
+              backgroundColor: '#181818',
+            }}>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 16, marginBottom: 2 }}>Your Answer</Text>
                 <Text style={{ color: '#fff', fontSize: 18 }}>
-                  {userAnswer === 'left' ? (dailyQuestion?.left || 'Option 1') : userAnswer === 'right' ? (dailyQuestion?.right || 'Option 2') : ''}
+                  {userAnswer === 'left' ? leftOption : userAnswer === 'right' ? rightOption : ''}
                 </Text>
               </View>
-            )}
+            </View>
           </View>
-        </View>
-      )}
+        )}
       
       <Text style={styles.location}>{event.location}</Text>
-      {event.date && <Text style={styles.info}>Date: {event.date}</Text>}
+      {event.date && (
+        <Text style={styles.prettyDate}>
+          📅 {new Date(event.date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
+        </Text>
+      )}
       {event.time && <Text style={styles.info}>Time: {event.time}</Text>}
       {event.category && <Text style={styles.info}>Category: {event.category}</Text>}
       {event.maxAttendees && <Text style={styles.info}>Max Attendees: {event.maxAttendees}</Text>}
@@ -163,13 +192,14 @@ export default function EventDetails({ event }: EventDetailsProps) {
       {/* Event Question Modal (shared component) */}
       <EventQuestionModal
         visible={showQuestionModal}
-        question={dailyQuestion?.question || 'Event Question'}
-        leftOption={dailyQuestion?.left || 'Option 1'}
-        rightOption={dailyQuestion?.right || 'Option 2'}
+        question={eventQuestion}
+        leftOption={leftOption}
+        rightOption={rightOption}
         onSelect={handleAnswer}
         onClose={() => setShowQuestionModal(false)}
       />
     </ScrollView>
+    </>
   );
 }
 
@@ -206,6 +236,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 6,
     textAlign: 'center',
+  },
+  prettyDate: {
+    fontSize: 18,
+    color: '#FF5CB3',
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    backgroundColor: '#181818',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 14,
+    alignSelf: 'center',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   description: {
     fontSize: 16,

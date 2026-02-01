@@ -61,14 +61,13 @@ export default function HomeScreen() {
   const currentUserData = mockData.users.find(u => u.id === currentUserId);
   const userEventIds = currentUserData?.events_gone_to?.map(e => e.id) || [];
   const recentEvents = allEvents.filter(e => userEventIds.includes(e.id));
-  const { currentUser, dailyQuestion, addVote, showResults, setShowResults, votes, finalResults } = useUser();
+  const { currentUser, dailyQuestion, addVote, showResults, setShowResults, votes, finalResults, hasSeenDailyResults, markDailyResultsAsSeen, answeredHotTake, setAnsweredHotTake } = useUser();
   // Use shared final results from UserContext instead of local state
   const finalLeftPercent = finalResults?.leftPercent || 0;
   const finalRightPercent = finalResults?.rightPercent || 0;
   const leftAnim = useRef(new Animated.Value(0)).current;
   const rightAnim = useRef(new Animated.Value(0)).current;
   const [showModal, setShowModal] = useState(true);
-  const [answeredHotTake, setAnsweredHotTake] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [galaxyUsers, setGalaxyUsers] = useState<GalaxyUserType[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -89,9 +88,15 @@ export default function HomeScreen() {
 
   // Show modal for new question
   useEffect(() => {
-    if (dailyQuestion && answeredHotTake !== dailyQuestion.question) {
+    console.log("dailyQuestion changed:", dailyQuestion?.question, "answeredHotTake:", answeredHotTake);
+    console.log("2: ", answeredHotTake != dailyQuestion?.question)
+    console.log("3: ", dailyQuestion)
+    console.log()
+    if (dailyQuestion && answeredHotTake != dailyQuestion?.question) {
       setShowModal(true);
       setAnsweredHotTake(null); // Reset answered state for new question
+    } else {
+      setShowModal(false);
     }
   }, [dailyQuestion, answeredHotTake]);
 
@@ -138,18 +143,18 @@ export default function HomeScreen() {
     setShowModal(false);
     // Set galaxyUsers for this event
     const users = mockData.users.filter((u: GalaxyUserType) => event.attendees.includes(u.id));
-    console.log("Galaxy Users for event:", users);
+    // console.log("Galaxy Users for event:", users);
     setGalaxyUsers(users);
     setActivePage(0); // Always start at Event Details
   }
-
   function handleCloseEventDetails() {
     setSelectedEvent(null);
     setActivePage(0);
+    setActiveTab('lobby'); // Reset to lobby tab when closing
   }
-
   return (
     <>
+    
       {selectedEvent ?
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -163,6 +168,7 @@ export default function HomeScreen() {
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
+          scrollEnabled={activeTab !== 'galaxy'} // Disable scrolling when on Social Galaxy tab
           onMomentumScrollEnd={e => {
             const page = Math.round(e.nativeEvent.contentOffset.x / width);
             setActivePage(page);
@@ -173,6 +179,7 @@ export default function HomeScreen() {
           <View style={{ width }}>
             <EventDetails event={selectedEvent} />
             <PanGestureHandler
+              enabled={activeTab !== 'galaxy'} // Disable gesture when on Social Galaxy tab
               onHandlerStateChange={(event) => {
                 if (event.nativeEvent.state === State.END) {
                   const { translationX } = event.nativeEvent;
@@ -262,6 +269,7 @@ export default function HomeScreen() {
 
             {/* Swipe back gesture */}
             <PanGestureHandler
+              enabled={activeTab !== 'galaxy'} // Disable gesture when on Social Galaxy tab
               onHandlerStateChange={(event) => {
                 if (event.nativeEvent.state === State.END) {
                   const { translationX } = event.nativeEvent;
@@ -320,15 +328,15 @@ export default function HomeScreen() {
         {/* Hot Take Results Modal */}
         {(() => {
           const userWon = userAnswer ? (userAnswer === 'left' ? (finalResults?.leftPercent || 0) >= (finalResults?.rightPercent || 0) : (finalResults?.rightPercent || 0) >= (finalResults?.leftPercent || 0)) : true;
-          return showResults && finalResults && (
-            <Modal visible={true} transparent={false} animationType="fade" onRequestClose={() => setShowResults(false)}>
+          return showResults && finalResults && !hasSeenDailyResults && (
+            <Modal visible={true} transparent={false} animationType="fade" onRequestClose={() => markDailyResultsAsSeen()}>
               <HotTakeResults
                 leftOption={option1}
                 rightOption={option2}
                 leftPercent={finalResults.leftPercent}
                 rightPercent={finalResults.rightPercent}
                 animate={true}
-                onClose={() => setShowResults(false)}
+                onClose={() => markDailyResultsAsSeen()}
                 userWon={userWon}
                 userChoice={userAnswer}
               />

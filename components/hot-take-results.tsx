@@ -188,7 +188,12 @@ export default function HotTakeResults({
         <TouchableOpacity 
           style={styles.button} 
           onPress={() => {
+            console.log('[DEBUG] Claim stamp button pressed');
+            console.log('[DEBUG] userChoice:', userChoice);
+            console.log('[DEBUG] onClose exists:', !!onClose);
+            
             if (userChoice) {
+              console.log('[DEBUG] User has made a choice, proceeding with navigation');
               // Close the current modal first, then navigate
               onClose?.();
               // Small delay to ensure modal closes before navigation
@@ -201,9 +206,21 @@ export default function HotTakeResults({
                   rightPercent: rightPercent.toString(),
                   userWon: userWon.toString(),
                 });
-                router.push(`/claim-stamp?${params.toString()}`);
+                const url = `/claim-sticker?${params.toString()}`;
+                console.log('[DEBUG] Navigating to:', url);
+                console.log('[DEBUG] Full params:', {
+                  userChoice,
+                  leftOption,
+                  rightOption,
+                  leftPercent,
+                  rightPercent,
+                  userWon
+                });
+                router.push(url);
+                console.log('[DEBUG] router.push called');
               }, 100);
             } else {
+              console.log('[DEBUG] No user choice, just closing modal');
               onClose?.();
             }
           }}

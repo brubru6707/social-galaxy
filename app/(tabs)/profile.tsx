@@ -20,7 +20,7 @@ export default function ProfileScreen() {
 
   // Debug: log when emojiPositions changes
   React.useEffect(() => {
-    console.log('[DEBUG] emojiPositions changed:', emojiPositions);
+    //console.log('[DEBUG] emojiPositions changed:', emojiPositions);
     // Sync Animated values with state
     Object.keys(emojiPositions).forEach(indexStr => {
       const index = parseInt(indexStr);
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   // Get or create animated values for emoji at index
   const getEmojiAnim = (index: number) => {
     if (!emojiAnimValues.current[index]) {
-      console.log(`[DEBUG] Creating new anim values for emoji ${index}`);
+      // console.log(`[DEBUG] Creating new anim values for emoji ${index}`);
       emojiAnimValues.current[index] = {
         translateX: new Animated.Value(0),
         translateY: new Animated.Value(0),

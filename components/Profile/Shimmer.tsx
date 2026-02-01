@@ -1,7 +1,8 @@
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import { getImageSource, isImagePath } from '../../assets/stickerImages';
 
 type ShimmerProps = {
   emoji: string;
@@ -10,6 +11,9 @@ type ShimmerProps = {
 
 export default function EmojiShimmer({ emoji, size = 80 }: ShimmerProps) {
   const animatedValue = useRef(new Animated.Value(0)).current;
+  const isImage = isImagePath(emoji);
+  const imageSource = isImage ? getImageSource(emoji) : null;
+  
   useEffect(() => {
     Animated.loop(
       Animated.timing(animatedValue, {
@@ -29,15 +33,31 @@ export default function EmojiShimmer({ emoji, size = 80 }: ShimmerProps) {
   return (
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
       
-      {/* LAYER 1: The Base Emoji (Always visible) */}
-      <Text style={{ fontSize: size }}>{emoji}</Text>
+      {/* LAYER 1: The Base Emoji or Image (Always visible) */}
+      {isImage && imageSource ? (
+        <Image 
+          source={imageSource} 
+          style={{ width: size, height: size, borderRadius: size / 4 }}
+          resizeMode="cover"
+        />
+      ) : (
+        <Text style={{ fontSize: size }}>{emoji}</Text>
+      )}
 
       {/* LAYER 2: The Shimmer Overlay */}
       <MaskedView
         style={StyleSheet.absoluteFill}
         maskElement={
           <View style={styles.maskContainer}>
-            <Text style={{ fontSize: size }}>{emoji}</Text>
+            {isImage && imageSource ? (
+              <Image 
+                source={imageSource} 
+                style={{ width: size, height: size, borderRadius: size / 4 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={{ fontSize: size }}>{emoji}</Text>
+            )}
           </View>
         }
       >

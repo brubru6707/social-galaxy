@@ -48,6 +48,12 @@
           "type": "regular",
           "question_text": "TikTok vs Instagram",
           "selected_option": "TikTok"
+        },
+        {
+          "question_id": "q_custom_cat",
+          "type": "regular",
+          "question_text": "Mewing Cat vs Giga Cat",
+          "selected_option": "Mewing Cat"
         }
       ],
       "events_gone_to": [

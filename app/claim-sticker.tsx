@@ -3,7 +3,9 @@ import React, { useEffect } from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import stickers from '../assets/stickers.json';
 import AnimatedLiquidGradient from '../components/AnimatedLiquidGradient';
+import EmojiShimmer from '../components/Profile/Shimmer';
 import { useUser } from '../contexts/UserContext';
+import { getDisplayName } from '../utils/displayNames';
 
 export default function ClaimStampScreen() {
   const router = useRouter();
@@ -14,6 +16,7 @@ export default function ClaimStampScreen() {
   // Get the sticker emoji based on user's choice
   const chosenOption = userChoice === 'left' ? leftOption : rightOption;
   const stickerEmoji = stickers[chosenOption as keyof typeof stickers] || '🎉';
+  const displayName = getDisplayName(chosenOption as string);
 
   // Save the hot take answer when the component mounts
   useEffect(() => {
@@ -30,12 +33,12 @@ export default function ClaimStampScreen() {
         <Text style={styles.title}>STAMP CLAIMED! 🎉</Text>
 
         <View style={styles.stickerContainer}>
-          <Text style={styles.stickerEmoji}>{stickerEmoji}</Text>
-          <Text style={styles.stickerLabel}>{chosenOption}</Text>
+          <EmojiShimmer emoji={stickerEmoji} size={80} />
+          <Text style={styles.stickerLabel}>{displayName}</Text>
         </View>
 
         <Text style={styles.message}>
-          You've earned the <Text style={styles.highlight}>{chosenOption}</Text> stamp!
+          You've earned the <Text style={styles.highlight}>{displayName}</Text> stamp!
         </Text>
 
         <Text style={styles.subMessage}>

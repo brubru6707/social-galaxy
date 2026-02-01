@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { getDisplayName } from '../utils/displayNames';
 
 export type EventQuestionModalProps = {
   visible: boolean;
@@ -37,9 +38,9 @@ export default function EventQuestionModal({
   const renderQuestionHeader = () => {
     return (
       <View style={styles.headerTextContainer}>
-        <Text style={styles.headerTitleItalic}>{leftOption}</Text>
+        <Text style={styles.headerTitleItalic}>{getDisplayName(leftOption)}</Text>
         <Text style={styles.headerOr}>OR</Text>
-        <Text style={styles.headerTitleItalic}>{rightOption}?</Text>
+        <Text style={styles.headerTitleItalic}>{getDisplayName(rightOption)}?</Text>
         <Text style={styles.subHeader}>CHOOSE YOUR VIBE</Text>
       </View>
     );
@@ -104,7 +105,7 @@ export default function EventQuestionModal({
                 <View style={styles.glowContainerCyan}>
                   <Text style={styles.bigSymbolCyan}>O</Text>
                 </View>
-                <Text style={styles.optionLabel}>{leftOption}</Text>
+                <Text style={styles.optionLabel}>{getDisplayName(leftOption)}</Text>
               </TouchableOpacity>
 
               {/* Vertical Divider */}
@@ -119,7 +120,7 @@ export default function EventQuestionModal({
                 <View style={styles.glowContainerMagenta}>
                   <Text style={styles.bigSymbolMagenta}>X</Text>
                 </View>
-                <Text style={styles.optionLabel}>{rightOption}</Text>
+                <Text style={styles.optionLabel}>{getDisplayName(rightOption)}</Text>
               </TouchableOpacity>
 
             </View>

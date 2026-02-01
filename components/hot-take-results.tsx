@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { getDisplayName } from '../utils/displayNames';
 
 // --- Configuration ---
 const { width, height } = Dimensions.get('window');
@@ -155,7 +156,7 @@ export default function HotTakeResults({
           
           {/* Label */}
           <Text style={styles.labelText}>
-            {leftOption.toUpperCase()}
+            {getDisplayName(leftOption).toUpperCase()}
           </Text>
         </View>
 
@@ -178,7 +179,7 @@ export default function HotTakeResults({
           
           {/* Label */}
           <Text style={styles.labelText}>
-            {rightOption.toUpperCase()}
+            {getDisplayName(rightOption).toUpperCase()}
           </Text>
         </View>
       </View>

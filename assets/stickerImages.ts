@@ -4,6 +4,8 @@
 export const stickerImages: Record<string, any> = {
   'cat_one.jpeg': require('./images/events/cat_one.jpeg'),
   'cat_two.jpg': require('./images/events/cat_two.jpg'),
+  'red_sox.jpg': require('./images/events/red_sox.jpg'),
+  'yankees.jpg': require('./images/events/yankees.jpg'),
 };
 
 // Helper function to get image source from path string

@@ -16,7 +16,7 @@ export default function DraggableStickerEmoji({
   emojiAnim: any;
   getAnswerEmoji: (answer: string) => string;
   gestureStartPositions: React.MutableRefObject<{ [key: number]: { x: number; y: number } }>;
-  setEmojiPositions: React.Dispatch<React.SetStateAction<{ [key: number]: { x: number; y: number } }>>;
+  setEmojiPositions: (index: number, position: { x: number; y: number; scale?: number }) => void;
   zIndex: number;
   onBringToFront: (index: number) => void;
 }) {
@@ -32,20 +32,27 @@ export default function DraggableStickerEmoji({
           useNativeDriver: false,
           listener: (event) => {
             const startPos = gestureStartPositions.current[index] || { x: 0, y: 0 };
-            emojiAnim.translateX.setValue(startPos.x + event.nativeEvent.translationX);
-            emojiAnim.translateY.setValue(startPos.y + event.nativeEvent.translationY);
-            setEmojiPositions((prev) => ({
-              ...prev,
-              [index]: {
-                x: startPos.x + event.nativeEvent.translationX,
-                y: startPos.y + event.nativeEvent.translationY,
-              },
-            }));
+            const newX = startPos.x + event.nativeEvent.translationX;
+            const newY = startPos.y + event.nativeEvent.translationY;
+            emojiAnim.translateX.setValue(newX);
+            emojiAnim.translateY.setValue(newY);
+            
+            const currentScale = emojiAnim.scale._value || 1;
+            console.log(`[PROFILE DraggableSticker ${index}] Dragging - x: ${newX.toFixed(2)}, y: ${newY.toFixed(2)}, scale: ${currentScale}`);
+            
+            setEmojiPositions(index, {
+              x: newX,
+              y: newY,
+              scale: currentScale,
+            });
           },
         }
       )}
       onHandlerStateChange={(event) => {
+        console.log(`[PROFILE DraggableSticker ${index}] State changed:`, event.nativeEvent.state);
+        
         if (event.nativeEvent.state === State.BEGAN) {
+          console.log(`[PROFILE DraggableSticker ${index}] BEGAN - Bringing to front`);
           // Bring this sticker to the front
           onBringToFront(index);
           
@@ -53,6 +60,8 @@ export default function DraggableStickerEmoji({
             x: emojiAnim.translateX._value,
             y: emojiAnim.translateY._value,
           };
+          console.log(`[PROFILE DraggableSticker ${index}] Start position:`, gestureStartPositions.current[index]);
+          
           Animated.spring(emojiAnim.scale, {
             toValue: 1.5,
             useNativeDriver: false,
@@ -62,6 +71,20 @@ export default function DraggableStickerEmoji({
           event.nativeEvent.state === State.CANCELLED ||
           event.nativeEvent.state === State.FAILED
         ) {
+          console.log(`[PROFILE DraggableSticker ${index}] END - Saving final position`);
+          const finalX = emojiAnim.translateX._value;
+          const finalY = emojiAnim.translateY._value;
+          const finalScale = 1; // Reset to 1 after drag
+          
+          console.log(`[PROFILE DraggableSticker ${index}] Final position - x: ${finalX}, y: ${finalY}, scale: ${finalScale}`);
+          
+          // Save final position with scale
+          setEmojiPositions(index, {
+            x: finalX,
+            y: finalY,
+            scale: finalScale,
+          });
+          
           Animated.spring(emojiAnim.scale, {
             toValue: 1,
             useNativeDriver: false,

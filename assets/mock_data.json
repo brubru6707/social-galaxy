@@ -215,6 +215,35 @@
           "event_hot_take_id": "eht_14",
           "event_hot_take_option_1": "Competition",
           "event_hot_take_option_2": "Collaboration"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -466,6 +495,35 @@
           "event_hot_take_id": "eht_16",
           "event_hot_take_option_1": "Team Building",
           "event_hot_take_option_2": "Individual Focus"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -712,6 +770,35 @@
           "event_hot_take_id": "eht_12",
           "event_hot_take_option_1": "Early Start",
           "event_hot_take_option_2": "Late Night"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -932,6 +1019,35 @@
           "event_hot_take_id": "eht_15",
           "event_hot_take_option_1": "Group Discussion",
           "event_hot_take_option_2": "Individual Work"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -1262,6 +1378,35 @@
           "event_hot_take_id": "eht_18",
           "event_hot_take_option_1": "Professional",
           "event_hot_take_option_2": "Fun"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -1551,6 +1696,35 @@
           "event_hot_take_id": "eht_13",
           "event_hot_take_option_1": "Networking",
           "event_hot_take_option_2": "Chill Hangout"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -1805,6 +1979,35 @@
           "event_hot_take_id": "eht_15",
           "event_hot_take_option_1": "Group Discussion",
           "event_hot_take_option_2": "Individual Work"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -2035,6 +2238,35 @@
           "event_hot_take_id": "eht_14",
           "event_hot_take_option_1": "Competition",
           "event_hot_take_option_2": "Collaboration"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -2292,6 +2524,35 @@
           "event_hot_take_id": "eht_18",
           "event_hot_take_option_1": "Professional",
           "event_hot_take_option_2": "Fun"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -2503,6 +2764,35 @@
           "event_hot_take_id": "eht_16",
           "event_hot_take_option_1": "Team Building",
           "event_hot_take_option_2": "Individual Focus"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -2816,6 +3106,35 @@
           "event_hot_take_id": "eht_12",
           "event_hot_take_option_1": "Early Start",
           "event_hot_take_option_2": "Late Night"
+        },
+        {
+          "id": "evt_custom_redsox_yankees",
+          "title": "Red Sox vs Yankees Showdown",
+          "location": "Sports Bar Fenway",
+          "host": "Bruno",
+          "total_spots": 30,
+          "cost_per_person": 15,
+          "rsvp_deadline": "2026-02-08T17:00:00.000000",
+          "spots_taken": 11,
+          "date": "2026-02-15T19:00:00.000000",
+          "event_picture": "https://picsum.photos/seed/redsox/400/200",
+          "attendees": [
+            "u_0",
+            "u_1",
+            "u_2",
+            "u_3",
+            "u_4",
+            "u_5",
+            "u_6",
+            "u_7",
+            "u_8",
+            "u_9",
+            "u_10"
+          ],
+          "event_hot_take_question": "Red Sox vs Yankees",
+          "event_hot_take_id": "eht_custom_redsox_yankees",
+          "event_hot_take_option_1": "red_sox.jpg",
+          "event_hot_take_option_2": "yankees.jpg"
         }
       ],
       "mutuals": [
@@ -10831,6 +11150,35 @@
       "event_hot_take_id": "eht_19",
       "event_hot_take_option_1": "Creative",
       "event_hot_take_option_2": "Practical"
+    },
+    {
+      "id": "evt_custom_redsox_yankees",
+      "title": "Red Sox vs Yankees Showdown",
+      "location": "Sports Bar Fenway",
+      "host": "Bruno",
+      "total_spots": 30,
+      "cost_per_person": 15,
+      "rsvp_deadline": "2026-02-08T17:00:00.000000",
+      "spots_taken": 11,
+      "date": "2026-02-15T19:00:00.000000",
+      "event_picture": "https://picsum.photos/seed/redsox/400/200",
+      "attendees": [
+        "u_0",
+        "u_1",
+        "u_2",
+        "u_3",
+        "u_4",
+        "u_5",
+        "u_6",
+        "u_7",
+        "u_8",
+        "u_9",
+        "u_10"
+      ],
+      "event_hot_take_question": "Red Sox vs Yankees",
+      "event_hot_take_id": "eht_custom_redsox_yankees",
+      "event_hot_take_option_1": "red_sox.jpg",
+      "event_hot_take_option_2": "yankees.jpg"
     }
   ],
   "current_user_id": "u_0"

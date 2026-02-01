@@ -47,6 +47,10 @@ interface UserContextType {
   setEventAnswer: (eventId: string, answer: 'left' | 'right') => void;
   answeredHotTake: string | null;
   setAnsweredHotTake: (val: string | null) => void;
+  stickerPositions: Record<number, { x: number; y: number; scale?: number }>;
+  updateStickerPosition: (index: number, position: { x: number; y: number; scale?: number }) => void;
+  stickerZIndexes: Record<number, number>;
+  updateStickerZIndex: (index: number, zIndex: number) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -73,6 +77,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [hasSeenDailyResults, setHasSeenDailyResults] = useState(false);
   const [eventAnswers, setEventAnswers] = useState<Record<string, 'left' | 'right'>>({});
   const [answeredHotTake, setAnsweredHotTake] = useState<string | null>(null);
+  const [stickerPositions, setStickerPositions] = useState<Record<number, { x: number; y: number; scale?: number }>>({});
+  const [stickerZIndexes, setStickerZIndexes] = useState<Record<number, number>>({});
 
   // Setup notifications (only on native platforms)
   useEffect(() => {
@@ -382,6 +388,30 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
+  const updateStickerPosition = (index: number, position: { x: number; y: number; scale?: number }) => {
+    console.log(`[UserContext] updateStickerPosition called - index: ${index}, position:`, position);
+    setStickerPositions(prev => {
+      const newPositions = {
+        ...prev,
+        [index]: position
+      };
+      console.log(`[UserContext] New stickerPositions:`, newPositions);
+      return newPositions;
+    });
+  };
+
+  const updateStickerZIndex = (index: number, zIndex: number) => {
+    console.log(`[UserContext] updateStickerZIndex called - index: ${index}, zIndex: ${zIndex}`);
+    setStickerZIndexes(prev => {
+      const newZIndexes = {
+        ...prev,
+        [index]: zIndex
+      };
+      console.log(`[UserContext] New stickerZIndexes:`, newZIndexes);
+      return newZIndexes;
+    });
+  };
+
   useEffect(() => {
     // Load mock data
     const loadMockData = async () => {
@@ -413,7 +443,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, finalResults, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent, addHotTakeAnswer, seenEventResults, markEventResultsAsSeen, hasSeenDailyResults, markDailyResultsAsSeen, eventAnswers, setEventAnswer, answeredHotTake, setAnsweredHotTake }}>
+    <UserContext.Provider value={{ currentUser, allUsers, setCurrentUser, dailyQuestion, votes, finalResults, setDailyQuestion, addVote, endDay, newDay, showResults, setShowResults, rsvpToEvent, endedEvents, endEvent, addHotTakeAnswer, seenEventResults, markEventResultsAsSeen, hasSeenDailyResults, markDailyResultsAsSeen, eventAnswers, setEventAnswer, answeredHotTake, setAnsweredHotTake, stickerPositions, updateStickerPosition, stickerZIndexes, updateStickerZIndex }}>
       {children}
     </UserContext.Provider>
   );

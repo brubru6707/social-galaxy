@@ -7,33 +7,35 @@ import { Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import stickersData from '../../assets/stickers.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
+import { getDisplayName } from '../../utils/displayNames';
 
 export default function ProfileScreen() {
-  const { currentUser } = useUser();
+  const { currentUser, stickerPositions, updateStickerPosition, stickerZIndexes, updateStickerZIndex } = useUser();
   const scrollViewRef = useRef<ScrollView>(null);
   const profileCaptureRef = useRef<View>(null);
   const rootCaptureRef = useRef<View>(null);
-  const [emojiPositions, setEmojiPositions] = useState<{[key: number]: {x: number, y: number}}>({});
-  const [emojiZIndexes, setEmojiZIndexes] = useState<{[key: number]: number}>({});
   const [showShareCard, setShowShareCard] = useState(false);
   const gestureStartPositions = useRef<{[key: number]: {x: number, y: number}}>({});
   const emojiAnimValues = useRef<{[key: number]: {translateX: Animated.Value, translateY: Animated.Value, scale: Animated.Value}}>({});
   const maxZIndex = useRef(1000);
 
-  // Debug: log when emojiPositions changes
+  // Initialize animated values from persisted positions
   React.useEffect(() => {
-    console.log('[DEBUG] emojiPositions changed:', emojiPositions);
-    // Sync Animated values with state
-    Object.keys(emojiPositions).forEach(indexStr => {
+    console.log('[Profile] Initializing sticker positions from context:', stickerPositions);
+    Object.keys(stickerPositions).forEach(indexStr => {
       const index = parseInt(indexStr);
       const anim = getEmojiAnim(index);
-      const pos = emojiPositions[index];
+      const pos = stickerPositions[index];
       if (pos) {
+        console.log(`[Profile] Setting position for sticker ${index}:`, pos);
         anim.translateX.setValue(pos.x);
         anim.translateY.setValue(pos.y);
+        if (pos.scale) {
+          anim.scale.setValue(pos.scale);
+        }
       }
     });
-  }, [emojiPositions]);
+  }, [stickerPositions]);
 
     // Stickers with index signature for type safety
     const stickers: Record<string, string> = stickersData;
@@ -58,10 +60,8 @@ export default function ProfileScreen() {
   // Bring sticker to front when touched
   const bringToFront = (index: number) => {
     maxZIndex.current += 1;
-    setEmojiZIndexes(prev => ({
-      ...prev,
-      [index]: maxZIndex.current
-    }));
+    console.log(`[Profile] Bringing sticker ${index} to front with zIndex: ${maxZIndex.current}`);
+    updateStickerZIndex(index, maxZIndex.current);
   };
 
   // Map currentUser data to the expected format
@@ -70,7 +70,17 @@ export default function ProfileScreen() {
     firstName: currentUser?.name || 'User',
     lastName: '',
     profile_picture: currentUser?.profile_picture || "https://i.pravatar.cc/300?u='USER'",
-    dateJoined: currentUser?.dob || 'Unknown',
+    dateJoined: currentUser?.joined ?
+      (() => {
+        const date = new Date(currentUser.joined);
+        if (isNaN(date.getTime())) return 'Unknown';
+        return date.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+      })()
+      : 'Unknown',
     mutuals: currentUser?.mutuals?.length || 0,
     bio: currentUser?.bio || 'No bio available',
     hotTakes: currentUser?.hot_take_answers?.map((take: any) => ({
@@ -111,16 +121,16 @@ export default function ProfileScreen() {
             const emojiAnim = getEmojiAnim(index);
             return (
               <View key={index} style={styles.hotTakeItem}>
-                <Text style={styles.hotTakeQuestion}>{take.question}</Text>
+                <Text style={styles.hotTakeQuestion}>{take.question.split(' vs ').map((part: string) => getDisplayName(part.trim())).join(' vs ')}</Text>
                 <View style={styles.hotTakeAnswerContainer}>
-                  <Text style={styles.hotTakeAnswer}>{take.answer}</Text>
+                  <Text style={styles.hotTakeAnswer}>{getDisplayName(take.answer)}</Text>
                   <DraggableStickerEmoji
                     index={index}
                     emojiAnim={emojiAnim}
                     getAnswerEmoji={() => getAnswerEmoji(take.answer)}
                     gestureStartPositions={gestureStartPositions}
-                    setEmojiPositions={setEmojiPositions}
-                    zIndex={emojiZIndexes[index] || 1000 + index}
+                    setEmojiPositions={updateStickerPosition}
+                    zIndex={stickerZIndexes[index] || 1000 + index}
                     onBringToFront={bringToFront}
                   />
                 </View>

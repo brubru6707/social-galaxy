@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getDisplayName } from '../utils/displayNames';
 
 export default function OtherProfile({ user, onClose }: { user: any, onClose: () => void }) {
   return (
@@ -14,7 +15,7 @@ export default function OtherProfile({ user, onClose }: { user: any, onClose: ()
             user.hot_take_answers.map((ht: any, idx: number) => (
               <View key={idx} style={styles.hotTake}>
                 <Text style={styles.question}>{ht.question_text}</Text>
-                <Text style={styles.answer}>{ht.selected_option || ht.answer}</Text>
+                <Text style={styles.answer}>{getDisplayName(ht.selected_option || ht.answer)}</Text>
               </View>
             ))
           ) : (

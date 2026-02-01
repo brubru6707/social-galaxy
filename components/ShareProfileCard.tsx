@@ -2,7 +2,7 @@ import EmojiShimmer from '@/components/Profile/Shimmer';
 import * as Sharing from 'expo-sharing';
 import React, { useMemo, useRef, useState } from 'react';
 import { Animated, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { LongPressGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { captureRef } from 'react-native-view-shot';
 
 type ShareProfileCardProps = {
@@ -93,9 +93,37 @@ export default function ShareProfileCard({
   // Track current sticker positions (can be updated by dragging)
   const [stickerPositions, setStickerPositions] = useState<{ [key: number]: { x: number; y: number } }>({});
   
+  // Track deleted stickers
+  const [deletedStickers, setDeletedStickers] = useState<Set<number>>(new Set());
+  
+  // Track which sticker is showing delete button
+  const [showDeleteFor, setShowDeleteFor] = useState<number | null>(null);
+  
   // Animated values for each sticker
   const stickerAnimValues = useRef<{ [key: number]: { translateX: Animated.Value; translateY: Animated.Value; scale: Animated.Value } }>({});
   const gestureStartPositions = useRef<{ [key: number]: { x: number; y: number } }>({});
+  const gestureStartScales = useRef<{ [key: number]: number }>({});
+  
+
+  // Handle sticker deletion
+  const handleDeleteSticker = (index: number) => {
+    setDeletedStickers((prev) => new Set([...prev, index]));
+    setShowDeleteFor(null);
+  };
+
+  // Handle sticker scaling
+  const handleScaleSticker = (index: number, direction: 'up' | 'down') => {
+    const anim = getStickerAnim(index);
+    const currentScale = gestureStartScales.current[index] || 1;
+    const scaleStep = 0.3;
+    let newScale = direction === 'up' ? currentScale + scaleStep : currentScale - scaleStep;
+    newScale = Math.max(0.5, Math.min(2.5, newScale)); // Clamp between 0.5 and 2.5
+    gestureStartScales.current[index] = newScale;
+    Animated.spring(anim.scale, {
+      toValue: newScale,
+      useNativeDriver: false,
+    }).start();
+  };
 
   // Get or create animated values for a sticker
   const getStickerAnim = (index: number) => {
@@ -106,6 +134,7 @@ export default function ShareProfileCard({
         translateY: new Animated.Value(initialPos.y),
         scale: new Animated.Value(1),
       };
+      gestureStartScales.current[index] = 1;
     }
     return stickerAnimValues.current[index];
   };
@@ -134,68 +163,106 @@ export default function ShareProfileCard({
       <View style={styles.container}>
         {/* Capturable Card */}
         <View ref={cardRef} style={[styles.card, { backgroundColor: selectedBgColor }]} collapsable={false}>
-          {/* Draggable stickers */}
-          <View style={styles.stickersContainer}>
+          {/* Dismiss delete button on tap anywhere */}
+          <TouchableOpacity 
+            style={styles.cardTouchable} 
+            activeOpacity={1}
+            onPress={() => setShowDeleteFor(null)}
+          />
+          
+          {/* Draggable and scalable stickers */}
+          <View style={styles.stickersContainer} pointerEvents="box-none">
             {stickers.map((emoji, index) => {
+              // Skip deleted stickers
+              if (deletedStickers.has(index)) return null;
+              
               const anim = getStickerAnim(index);
+              
               return (
-                <PanGestureHandler
+                <LongPressGestureHandler
                   key={index}
-                  onGestureEvent={Animated.event(
-                    [],
-                    {
-                      useNativeDriver: false,
-                      listener: (event: any) => {
-                        const startPos = gestureStartPositions.current[index] || initialPositions[index] || { x: 0, y: 0 };
-                        const newX = startPos.x + event.nativeEvent.translationX;
-                        const newY = startPos.y + event.nativeEvent.translationY;
-                        anim.translateX.setValue(newX);
-                        anim.translateY.setValue(newY);
-                        setStickerPositions((prev) => ({
-                          ...prev,
-                          [index]: { x: newX, y: newY },
-                        }));
-                      },
-                    }
-                  )}
+                  minDurationMs={500}
                   onHandlerStateChange={(event) => {
-                    if (event.nativeEvent.state === State.BEGAN) {
-                      gestureStartPositions.current[index] = {
-                        x: (anim.translateX as any)._value,
-                        y: (anim.translateY as any)._value,
-                      };
-                      Animated.spring(anim.scale, {
-                        toValue: 1.3,
-                        useNativeDriver: false,
-                      }).start();
-                    } else if (
-                      event.nativeEvent.state === State.END ||
-                      event.nativeEvent.state === State.CANCELLED ||
-                      event.nativeEvent.state === State.FAILED
-                    ) {
-                      Animated.spring(anim.scale, {
-                        toValue: 1,
-                        useNativeDriver: false,
-                      }).start();
+                    if (event.nativeEvent.state === State.ACTIVE) {
+                      setShowDeleteFor(index);
                     }
                   }}
                 >
-                  <Animated.View
-                    style={[
-                      styles.stickerWrapper,
-                      {
-                        transform: [
-                          { translateX: anim.translateX },
-                          { translateY: anim.translateY },
-                          { scale: anim.scale },
-                        ],
-                        zIndex: 9999,
-                      },
-                    ]}
-                  >
-                    <EmojiShimmer emoji={emoji} size={STICKER_SIZE} />
+                  <Animated.View>
+                    <PanGestureHandler
+                      onGestureEvent={Animated.event(
+                        [],
+                        {
+                          useNativeDriver: false,
+                          listener: (event: any) => {
+                            const startPos = gestureStartPositions.current[index] || initialPositions[index] || { x: 0, y: 0 };
+                            const newX = startPos.x + event.nativeEvent.translationX;
+                            const newY = startPos.y + event.nativeEvent.translationY;
+                            anim.translateX.setValue(newX);
+                            anim.translateY.setValue(newY);
+                            setStickerPositions((prev) => ({
+                              ...prev,
+                              [index]: { x: newX, y: newY },
+                            }));
+                          },
+                        }
+                      )}
+                      onHandlerStateChange={(event) => {
+                        if (event.nativeEvent.state === State.BEGAN) {
+                          gestureStartPositions.current[index] = {
+                            x: (anim.translateX as any)._value,
+                            y: (anim.translateY as any)._value,
+                          };
+                        }
+                      }}
+                    >
+                      <Animated.View
+                        style={[
+                          styles.stickerWrapper,
+                          {
+                            transform: [
+                              { translateX: anim.translateX },
+                              { translateY: anim.translateY },
+                              { scale: anim.scale },
+                            ],
+                            zIndex: showDeleteFor === index ? 10000 : 9999,
+                          },
+                        ]}
+                      >
+                        <EmojiShimmer emoji={emoji} size={STICKER_SIZE} />
+                        {/* Control buttons on long press */}
+                        {showDeleteFor === index && (
+                          <View style={styles.stickerControls}>
+                            {/* Scale down button */}
+                            <TouchableOpacity
+                              style={styles.scaleButton}
+                              onPress={() => handleScaleSticker(index, 'down')}
+                              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                            >
+                              <Text style={styles.scaleButtonText}>−</Text>
+                            </TouchableOpacity>
+                            {/* Delete button */}
+                            <TouchableOpacity
+                              style={styles.deleteButton}
+                              onPress={() => handleDeleteSticker(index)}
+                              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                            >
+                              <Text style={styles.deleteButtonText}>✕</Text>
+                            </TouchableOpacity>
+                            {/* Scale up button */}
+                            <TouchableOpacity
+                              style={styles.scaleButton}
+                              onPress={() => handleScaleSticker(index, 'up')}
+                              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                            >
+                              <Text style={styles.scaleButtonText}>+</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </Animated.View>
+                    </PanGestureHandler>
                   </Animated.View>
-                </PanGestureHandler>
+                </LongPressGestureHandler>
               );
             })}
           </View>
@@ -264,6 +331,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFD700',
   },
+  cardTouchable: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   stickersContainer: {
     position: 'absolute',
     width: CARD_WIDTH,
@@ -273,6 +347,46 @@ const styles = StyleSheet.create({
   },
   stickerWrapper: {
     position: 'absolute',
+  },
+  stickerControls: {
+    position: 'absolute',
+    top: -35,
+    left: '50%',
+    transform: [{ translateX: -45 }],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  deleteButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  scaleButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#4455aa',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scaleButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: -2,
   },
   profileContainer: {
     alignItems: 'center',

@@ -1,12 +1,9 @@
 import { useUser } from '@/contexts/UserContext';
 import { useGrove } from '@/contexts/GroveContext';
-import GROVES from '@/assets/groves_data';
-import React, { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import stickers from '../assets/stickers.json';
-import Confetti from './Confetti';
-import EventQuestionModal from './event-question-modal';
-import HotTakeResults from './hot-take-results';
+import GROVES, { Grove } from '@/assets/groves_data';
+import React, { useState } from 'react';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import GroveDetail from './grove-detail';
 
 export type EventDetailsProps = {
   event: {
@@ -27,18 +24,11 @@ export type EventDetailsProps = {
 
 
 export default function EventDetails({ event }: EventDetailsProps) {
-  const { currentUser, dailyQuestion, rsvpToEvent, endedEvents } = useUser();
+  const { currentUser, rsvpToEvent } = useUser();
   const { canAccessEvent, isGroveMember } = useGrove();
   const isUserAttending = currentUser && currentUser.events_gone_to.includes(event.id);
   const [goingPressed, setGoingPressed] = useState(false);
-  const [showQuestionModal, setShowQuestionModal] = useState(false);
-  const [answered, setAnswered] = useState(false);
-  const [userAnswer, setUserAnswer] = useState<'left' | 'right' | null>(null);
-  const [showConfetti, setShowConfetti] = useState(false);
-
-  // Check if this event has been ended by admin
-  const eventResult = endedEvents[event.id];
-  const eventEnded = !!eventResult;
+  const [selectedGrove, setSelectedGrove] = useState<Grove | null>(null);
   
   // Get groves this event belongs to
   const getEventGroves = () => {
@@ -55,64 +45,32 @@ export default function EventDetails({ event }: EventDetailsProps) {
   const eventGroves = getEventGroves();
   const access = canAccessEvent(event);
 
-  // Show confetti when event results appear and user won
-  useEffect(() => {
-    if (eventEnded && eventResult && userAnswer) {
-      const userWon = (userAnswer === 'left' && eventResult.leftPercent >= 50) || 
-                       (userAnswer === 'right' && eventResult.rightPercent >= 50);
-      if (userWon) {
-        // Small delay to ensure rendering is complete
-        const showTimer = setTimeout(() => {
-          setShowConfetti(true);
-        }, 100);
-        const hideTimer = setTimeout(() => setShowConfetti(false), 4100);
-        return () => {
-          clearTimeout(showTimer);
-          clearTimeout(hideTimer);
-        };
+  // Handle RSVP directly without hot take modal
+  const handleGoingPress = () => {
+    if (!isUserAttending && !goingPressed && access.canAccess) {
+      setGoingPressed(true);
+      if (currentUser) {
+        rsvpToEvent(event.id);
       }
     }
-  }, [eventEnded, eventResult?.leftPercent, eventResult?.rightPercent, userAnswer]);
-
-  // Show modal only if user is not already attending and hasn't answered yet
-  const handleGoingPress = () => {
-    if (!isUserAttending && !goingPressed) {
-      setShowQuestionModal(true);
-      setGoingPressed(true);
-    }
-  };
-
-  const handleAnswer = (answer: string) => {
-    setShowQuestionModal(false);
-    setAnswered(true);
-    setUserAnswer(answer as 'left' | 'right');
-    if (currentUser && !isUserAttending) {
-      rsvpToEvent(event.id);
-    }
-  };
-
-  // Determine winning emoji for confetti
-  const getWinningEmoji = () => {
-    if (!userAnswer || !eventResult) return undefined;
-    
-    const winningOption = userAnswer === 'left' ? dailyQuestion?.left : dailyQuestion?.right;
-    return stickers[winningOption as keyof typeof stickers] || '🎉';
   };
 
   return (
+    <>
     <ScrollView contentContainerStyle={[styles.container, (isUserAttending || goingPressed) && styles.darkerBg]}>
-      <Confetti active={showConfetti} emoji={getWinningEmoji()} />
       {event.event_picture && (
         <Image source={{ uri: event.event_picture }} style={styles.image} />
       )}
       <Text style={styles.title}>{event.title}</Text>
       
-      {/* Grove Badges */}
+      {/* Grove Badges - Clickable */}
       {eventGroves.length > 0 && (
         <View style={styles.groveBadgesRow}>
           {eventGroves.map(grove => (
-            <View 
-              key={grove.id} 
+            <TouchableOpacity 
+              key={grove.id}
+              onPress={() => setSelectedGrove(grove)}
+              activeOpacity={0.7}
               style={[
                 styles.groveBadgeDetail,
                 { 
@@ -128,7 +86,7 @@ export default function EventDetails({ event }: EventDetailsProps) {
               {isGroveMember(grove.id) && (
                 <Text style={styles.memberCheck}>✓</Text>
               )}
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -145,40 +103,11 @@ export default function EventDetails({ event }: EventDetailsProps) {
           </View>
         </View>
       )}
-
-      {/* Show user's answer/results under event name, like home page */}
-      {(userAnswer || answered) && (
-        <View style={{ width: '100%', alignItems: 'center', marginBottom: 8 }}>
-          <View style={{
-            width: '90%',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 2,
-            borderColor: '#FFD700',
-            borderRadius: 20,
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            marginTop: 4,
-            backgroundColor: '#181818',
-          }}>
-            {eventEnded && eventResult ? (
-              <HotTakeResults
-                leftOption={dailyQuestion?.left || 'Option 1'}
-                rightOption={dailyQuestion?.right || 'Option 2'}
-                leftPercent={eventResult.leftPercent}
-                rightPercent={eventResult.rightPercent}
-                animate={true}
-                showWrapper={false}
-              />
-            ) : (
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 16, marginBottom: 2 }}>Your Answer</Text>
-                <Text style={{ color: '#fff', fontSize: 18 }}>
-                  {userAnswer === 'left' ? (dailyQuestion?.left || 'Option 1') : userAnswer === 'right' ? (dailyQuestion?.right || 'Option 2') : ''}
-                </Text>
-              </View>
-            )}
-          </View>
+      
+      {/* RSVP confirmation */}
+      {goingPressed && (
+        <View style={styles.rsvpConfirmation}>
+          <Text style={styles.rsvpConfirmationText}>You're going!</Text>
         </View>
       )}
       
@@ -226,16 +155,23 @@ export default function EventDetails({ event }: EventDetailsProps) {
         </TouchableOpacity>
       </View>
 
-      {/* Event Question Modal (shared component) */}
-      <EventQuestionModal
-        visible={showQuestionModal}
-        question={dailyQuestion?.question || 'Event Question'}
-        leftOption={dailyQuestion?.left || 'Option 1'}
-        rightOption={dailyQuestion?.right || 'Option 2'}
-        onSelect={handleAnswer}
-        onClose={() => setShowQuestionModal(false)}
-      />
-    </ScrollView>
+      </ScrollView>
+      
+      {/* Grove Detail Modal */}
+      <Modal
+        visible={selectedGrove !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSelectedGrove(null)}
+      >
+        {selectedGrove && (
+          <GroveDetail
+            grove={selectedGrove}
+            onClose={() => setSelectedGrove(null)}
+          />
+        )}
+      </Modal>
+    </>
   );
 }
 
@@ -247,6 +183,18 @@ const styles = StyleSheet.create({
   },
   darkerBg: {
     backgroundColor: '#000',
+  },
+  rsvpConfirmation: {
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  rsvpConfirmationText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   image: {
     width: '100%',

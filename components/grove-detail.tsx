@@ -15,6 +15,7 @@ import { useUser } from '@/contexts/UserContext';
 import { Grove, GroveProfile } from '@/assets/groves_data';
 import mockData from '@/assets/mock_data.json';
 import GroveProfileEditor from './grove-profile-editor';
+import GroveSocialGalaxy from './grove-social-galaxy';
 
 const { width } = Dimensions.get('window');
 
@@ -26,7 +27,7 @@ interface GroveDetailProps {
 export default function GroveDetail({ grove, onClose }: GroveDetailProps) {
   const { isGroveMember, groveProgress, joinGrove, getGroveProfile, updateGroveProfile } = useGrove();
   const { allUsers, currentUser } = useUser();
-  const [activeTab, setActiveTab] = useState<'members' | 'events' | 'profile'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'events' | 'galaxy' | 'profile'>('members');
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   
   const isMember = isGroveMember(grove.id);
@@ -132,6 +133,14 @@ export default function GroveDetail({ grove, onClose }: GroveDetailProps) {
               Events
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'galaxy' && styles.tabActive]}
+            onPress={() => setActiveTab('galaxy')}
+          >
+            <Text style={[styles.tabText, activeTab === 'galaxy' && styles.tabTextActive]}>
+              Galaxy
+            </Text>
+          </TouchableOpacity>
           {isMember && (
             <TouchableOpacity 
               style={[styles.tab, activeTab === 'profile' && styles.tabActive]}
@@ -211,6 +220,25 @@ export default function GroveDetail({ grove, onClose }: GroveDetailProps) {
           </View>
         )}
         
+        {activeTab === 'galaxy' && (
+          <View style={styles.galaxySection}>
+            <Text style={styles.sectionTitle}>
+              {isMember ? 'Your Grove Connections' : 'Your Friends in this Grove'}
+            </Text>
+            <Text style={styles.sectionSubtitle}>
+              {isMember 
+                ? 'See how you connect with other grove members'
+                : 'Discover your connections to this community'
+              }
+            </Text>
+            <GroveSocialGalaxy
+              grove={grove}
+              currentUserId={currentUser?.id || ''}
+              groveMembers={members}
+            />
+          </View>
+        )}
+        
         {activeTab === 'profile' && isMember && (
           <View style={styles.profileSection}>
             <Text style={styles.sectionTitle}>Your Grove Profile</Text>
@@ -240,24 +268,25 @@ export default function GroveDetail({ grove, onClose }: GroveDetailProps) {
               <Text style={styles.editProfileButtonText}>Edit Grove Profile</Text>
             </TouchableOpacity>
             
-            <View style={styles.visibilitySection}>
-              <Text style={styles.visibilityTitle}>Visible Hot Takes</Text>
-              <Text style={styles.visibilitySubtitle}>
-                Choose which hot takes to show in this grove
+            <View style={styles.recentEventsSection}>
+              <Text style={styles.recentEventsTitle}>Your Events in this Grove</Text>
+              <Text style={styles.recentEventsSubtitle}>
+                Events you've attended that match this community
               </Text>
               
-              {currentUser?.hot_take_answers?.slice(0, 3).map((hotTake: any, index: number) => (
-                <View key={index} style={styles.hotTakeRow}>
-                  <View style={styles.hotTakeInfo}>
-                    <Text style={styles.hotTakeQuestion}>
-                      {hotTake.question_text}
+              {currentUser?.events_gone_to?.slice(0, 3).map((event: any, index: number) => (
+                <View key={index} style={styles.recentEventRow}>
+                  <Image 
+                    source={{ uri: event.event_picture }}
+                    style={styles.recentEventImage}
+                  />
+                  <View style={styles.recentEventInfo}>
+                    <Text style={styles.recentEventTitle}>
+                      {event.title}
                     </Text>
-                    <Text style={styles.hotTakeAnswer}>
-                      {hotTake.selected_option || hotTake.answer}
+                    <Text style={styles.recentEventLocation}>
+                      {event.location}
                     </Text>
-                  </View>
-                  <View style={[styles.toggleButton, styles.toggleActive]}>
-                    <View style={styles.toggleDot} />
                   </View>
                 </View>
               ))}
@@ -532,6 +561,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
+  galaxySection: {
+    marginTop: 8,
+  },
   profileSection: {},
   profileCard: {
     flexDirection: 'row',
@@ -572,59 +604,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  visibilitySection: {
+  recentEventsSection: {
     backgroundColor: '#1F2937',
     borderRadius: 16,
     padding: 16,
   },
-  visibilityTitle: {
+  recentEventsTitle: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  visibilitySubtitle: {
+  recentEventsSubtitle: {
     color: '#9CA3AF',
     fontSize: 12,
     marginBottom: 16,
   },
-  hotTakeRow: {
+  recentEventRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
   },
-  hotTakeInfo: {
+  recentEventImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  recentEventInfo: {
     flex: 1,
   },
-  hotTakeQuestion: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  hotTakeAnswer: {
+  recentEventTitle: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '500',
+    marginBottom: 2,
   },
-  toggleButton: {
-    width: 44,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#374151',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  toggleActive: {
-    backgroundColor: '#10B981',
-  },
-  toggleDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    alignSelf: 'flex-end',
+  recentEventLocation: {
+    color: '#9CA3AF',
+    fontSize: 12,
   },
 });

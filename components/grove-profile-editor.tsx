@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Switch,
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,21 +36,15 @@ export default function GroveProfileEditor({
   // Form state
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
-  const [selectedHotTakes, setSelectedHotTakes] = useState<string[]>([]);
   
   // Initialize form with existing profile or defaults
   useEffect(() => {
     if (existingProfile) {
       setDisplayName(existingProfile.displayName || '');
       setBio(existingProfile.bio || '');
-      setSelectedHotTakes(existingProfile.visibleHotTakes || []);
     } else {
       setDisplayName(currentUser?.name || '');
       setBio(currentUser?.bio || '');
-      // Default: show all hot takes
-      setSelectedHotTakes(
-        currentUser?.hot_take_answers?.map((ht: any) => ht.question_id) || []
-      );
     }
   }, [existingProfile, currentUser, visible]);
   
@@ -60,21 +53,10 @@ export default function GroveProfileEditor({
       groveId: grove.id,
       displayName: displayName || undefined,
       bio: bio || undefined,
-      visibleHotTakes: selectedHotTakes,
     };
     onSave(profile);
     onClose();
   };
-  
-  const toggleHotTake = (questionId: string) => {
-    setSelectedHotTakes(prev => 
-      prev.includes(questionId)
-        ? prev.filter(id => id !== questionId)
-        : [...prev, questionId]
-    );
-  };
-  
-  const hotTakes = currentUser?.hot_take_answers || [];
   
   return (
     <Modal
@@ -159,52 +141,6 @@ export default function GroveProfileEditor({
             />
           </View>
           
-          {/* Visible Hot Takes */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Visible Hot Takes</Text>
-            <Text style={styles.inputHint}>
-              Choose which hot takes to show in this grove
-            </Text>
-            
-            <View style={styles.hotTakesList}>
-              {hotTakes.map((ht: any) => {
-                const isSelected = selectedHotTakes.includes(ht.question_id);
-                return (
-                  <TouchableOpacity
-                    key={ht.question_id}
-                    style={styles.hotTakeRow}
-                    onPress={() => toggleHotTake(ht.question_id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.hotTakeInfo}>
-                      <Text style={styles.hotTakeQuestion}>
-                        {ht.question_text}
-                      </Text>
-                      <Text style={styles.hotTakeAnswer}>
-                        {ht.selected_option || ht.answer}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.checkbox,
-                        isSelected && styles.checkboxSelected,
-                        isSelected && { backgroundColor: grove.color },
-                      ]}
-                    >
-                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            
-            {hotTakes.length === 0 && (
-              <Text style={styles.emptyText}>
-                No hot takes yet. Answer some questions first!
-              </Text>
-            )}
-          </View>
-          
           {/* Preview Section */}
           <View style={styles.previewSection}>
             <Text style={styles.previewTitle}>Preview</Text>
@@ -224,24 +160,15 @@ export default function GroveProfileEditor({
                 {bio || currentUser?.bio || 'No bio set'}
               </Text>
               
-              {selectedHotTakes.length > 0 && (
-                <View style={styles.previewHotTakes}>
-                  <Text style={styles.previewHotTakesTitle}>Hot Takes:</Text>
-                  {hotTakes
-                    .filter((ht: any) => selectedHotTakes.includes(ht.question_id))
-                    .slice(0, 2)
-                    .map((ht: any) => (
-                      <Text key={ht.question_id} style={styles.previewHotTake}>
-                        {ht.question_text}: {ht.selected_option || ht.answer}
-                      </Text>
-                    ))}
-                  {selectedHotTakes.length > 2 && (
-                    <Text style={styles.previewMore}>
-                      +{selectedHotTakes.length - 2} more
-                    </Text>
-                  )}
-                </View>
-              )}
+              {/* Recent Events Preview */}
+              <View style={styles.previewEvents}>
+                <Text style={styles.previewEventsTitle}>Recent Events</Text>
+                {currentUser?.events_gone_to?.slice(0, 2).map((evt: any, idx: number) => (
+                  <Text key={idx} style={styles.previewEvent}>
+                    {evt.title}
+                  </Text>
+                ))}
+              </View>
             </View>
           </View>
           
@@ -350,54 +277,6 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
-  hotTakesList: {
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  hotTakeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  hotTakeInfo: {
-    flex: 1,
-  },
-  hotTakeQuestion: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  hotTakeAnswer: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#374151',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxSelected: {
-    borderColor: 'transparent',
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  emptyText: {
-    color: '#6B7280',
-    fontSize: 14,
-    textAlign: 'center',
-    padding: 20,
-  },
   previewSection: {
     marginTop: 8,
   },
@@ -436,25 +315,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  previewHotTakes: {
+  previewEvents: {
     width: '100%',
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
   },
-  previewHotTakesTitle: {
+  previewEventsTitle: {
     color: '#6B7280',
     fontSize: 12,
     marginBottom: 8,
   },
-  previewHotTake: {
+  previewEvent: {
     color: '#fff',
     fontSize: 13,
     marginBottom: 4,
-  },
-  previewMore: {
-    color: '#6B7280',
-    fontSize: 12,
-    marginTop: 4,
   },
 });

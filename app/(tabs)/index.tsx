@@ -14,12 +14,8 @@ import {
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
-import stickers from '../../assets/stickers.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
-import Confetti from '../../components/Confetti';
 import EventDetails from '../../components/event-details';
-import EventQuestionModal from '../../components/event-question-modal';
-import HotTakeResults from '../../components/hot-take-results';
 import { UserType as GalaxyUserType } from '../../components/lobby';
 import { getNemesisAndBestie } from '../../components/lobby-match-utils';
 import { SocialGalaxy, calculateMatchScore } from '../../components/social-galaxy';
@@ -62,82 +58,16 @@ export default function HomeScreen() {
   const userEventIds = currentUserData?.events_gone_to?.map(e => e.id) || [];
   const recentEvents = allEvents.filter(e => userEventIds.includes(e.id));
 
-  const { currentUser, dailyQuestion, addVote, showResults, setShowResults, votes, finalResults } = useUser();
-  // Use shared final results from UserContext instead of local state
-  const finalLeftPercent = finalResults?.leftPercent || 0;
-  const finalRightPercent = finalResults?.rightPercent || 0;
-  const leftAnim = useRef(new Animated.Value(0)).current;
-  const rightAnim = useRef(new Animated.Value(0)).current;
-  const [showModal, setShowModal] = useState(true);
-  const [answeredHotTake, setAnsweredHotTake] = useState<string | null>(null);
+  const { currentUser } = useUser();
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [galaxyUsers, setGalaxyUsers] = useState<GalaxyUserType[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [activePage, setActivePage] = useState(0); // 0: Event, 1: Lobby/Galaxy
   const [activeTab, setActiveTab] = useState<'lobby' | 'galaxy'>('lobby'); // Tab within the second page
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [userAnswer, setUserAnswer] = useState<'left' | 'right' | null>(null);
-
-  // Reset percentages and animations when results are hidden
-  useEffect(() => {
-    if (!showResults) {
-      leftAnim.setValue(0);
-      rightAnim.setValue(0);
-      setShowConfetti(false);
-      setUserAnswer(null);
-    }
-  }, [showResults, leftAnim, rightAnim]);
-
-  // Show modal for new question
-  useEffect(() => {
-    if (dailyQuestion && answeredHotTake !== dailyQuestion.question) {
-      setShowModal(true);
-      setAnsweredHotTake(null); // Reset answered state for new question
-    }
-  }, [dailyQuestion, answeredHotTake]);
-
-  useEffect(() => {
-    if (answeredHotTake && showResults && finalResults) {
-      Animated.parallel([
-        Animated.timing(leftAnim, {
-          toValue: finalResults.leftPercent,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-        Animated.timing(rightAnim, {
-          toValue: finalResults.rightPercent,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-      ]).start(() => {
-        setShowConfetti(true);
-        // Reset confetti after animation
-        setTimeout(() => setShowConfetti(false), 4000);
-      });
-    }
-  }, [answeredHotTake, showResults, leftAnim, rightAnim, finalResults]);
-
-  // Determine winning emoji for confetti
-  const getWinningEmoji = () => {
-    if (!userAnswer || !finalResults) return undefined;
-    
-    const userWon = (userAnswer === 'left' && finalResults.leftPercent >= 50) || 
-                     (userAnswer === 'right' && finalResults.rightPercent >= 50);
-    
-    if (!userWon) return undefined;
-    
-    const winningOption = userAnswer === 'left' ? option1 : option2;
-    return stickers[winningOption as keyof typeof stickers] || '🎉';
-  };
-
-  const questionText = dailyQuestion ? dailyQuestion.question : '';
-  const option1 = dailyQuestion ? dailyQuestion.left : '';
-  const option2 = dailyQuestion ? dailyQuestion.right : '';
 
   function handleEventPress(event: EventType) {
     setSelectedEvent(event);
-    setShowModal(false);
     // Set galaxyUsers for this event
     const users = mockData.users.filter((u: GalaxyUserType) => event.attendees.includes(u.id));
     setGalaxyUsers(users);
@@ -304,60 +234,15 @@ export default function HomeScreen() {
       </SafeAreaView>
       : 
       <>
-        {/* Hot Question Modal (shared component) */}
-        <EventQuestionModal
-          visible={showModal}
-          question={questionText}
-          leftOption={option1}
-          rightOption={option2}
-          onSelect={(answer) => {
-            setShowModal(false);
-            setAnsweredHotTake(questionText);
-            setUserAnswer(answer);
-            addVote(answer);
-          }}
-          onClose={() => setShowModal(false)}
-        />
-        {/* Hot Take Results Modal */}
-        {(() => {
-          const userWon = userAnswer ? (userAnswer === 'left' ? (finalResults?.leftPercent || 0) >= (finalResults?.rightPercent || 0) : (finalResults?.rightPercent || 0) >= (finalResults?.leftPercent || 0)) : true;
-          return showResults && finalResults && (
-            <Modal visible={true} transparent={false} animationType="fade" onRequestClose={() => setShowResults(false)}>
-              <HotTakeResults
-                leftOption={option1}
-                rightOption={option2}
-                leftPercent={finalResults.leftPercent}
-                rightPercent={finalResults.rightPercent}
-                animate={true}
-                onClose={() => setShowResults(false)}
-                userWon={userWon}
-                userChoice={userAnswer}
-              />
-            </Modal>
-          );
-        })()}
+        {/* Hot take modals removed */}
         <SafeAreaView style={styles.container}>
           {/* Animated Liquid Gradient Background */}
           <AnimatedLiquidGradient />
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            {/* Fun Header */}
+            {/* Header */}
             <View style={styles.headerWrap}>
               <Text style={styles.logo}>partiful</Text>
-              {answeredHotTake && !showResults && (
-                <View style={styles.hotTakeHeaderWrap}>
-                  <View style={styles.questionContainer}>
-                    <Text style={styles.questionText}>{questionText}</Text>
-                    <View style={styles.optionsRow}>
-                      <Text style={[styles.optionText, styles.leftOption]}>{option1}</Text>
-                      <View style={styles.vsContainer}>
-                        <Text style={styles.vsText}>vs</Text>
-                      </View>
-                      <Text style={[styles.optionText, styles.rightOption]}>{option2}</Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-              <Text style={styles.greeting}>Hey, {currentUser?.name || 'Party Person'}! 🎉</Text>
+              <Text style={styles.greeting}>Hey, {currentUser?.name || 'Party Person'}!</Text>
             </View>
             {/* Recent Events Carousel */}
             <View style={styles.section}>
@@ -388,7 +273,6 @@ export default function HomeScreen() {
 
           </ScrollView>
         </SafeAreaView>
-        <Confetti active={showConfetti} emoji={getWinningEmoji()} />
       </>
 }
     </>

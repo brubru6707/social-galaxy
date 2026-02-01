@@ -1,6 +1,7 @@
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import GROVES from '@/assets/groves_data';
+import React, { useState } from 'react';
+import { Image, Modal, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import GROVES, { Grove } from '@/assets/groves_data';
+import GroveDetail from './grove-detail';
 
 interface OtherProfileProps {
   user: any;
@@ -9,6 +10,8 @@ interface OtherProfileProps {
 }
 
 export default function OtherProfile({ user, onClose, groveContext }: OtherProfileProps) {
+  const [selectedGrove, setSelectedGrove] = useState<Grove | null>(null);
+  
   // Get groves this user belongs to
   const userGroves = GROVES.filter(grove => grove.members.includes(user.id));
   
@@ -21,6 +24,7 @@ export default function OtherProfile({ user, onClose, groveContext }: OtherProfi
   const displayHotTakes = user.hot_take_answers || [];
   
   return (
+    <>
     <View style={styles.overlay}>
       <View style={styles.modal}>
         <ScrollView contentContainerStyle={styles.content}>
@@ -38,19 +42,21 @@ export default function OtherProfile({ user, onClose, groveContext }: OtherProfi
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.bio}>{displayBio}</Text>
           
-          {/* Grove Badges */}
+          {/* Grove Badges - Clickable */}
           {userGroves.length > 0 && !groveContext && (
             <View style={styles.groveBadgesContainer}>
               {userGroves.map(grove => (
-                <View 
-                  key={grove.id} 
+                <TouchableOpacity 
+                  key={grove.id}
+                  onPress={() => setSelectedGrove(grove)}
+                  activeOpacity={0.7}
                   style={[styles.groveBadge, { backgroundColor: grove.color + '30' }]}
                 >
                   <Text style={styles.groveBadgeEmoji}>{grove.emoji}</Text>
                   <Text style={[styles.groveBadgeText, { color: grove.color }]}>
                     {grove.name.replace(' Grove', '')}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           )}
@@ -89,6 +95,22 @@ export default function OtherProfile({ user, onClose, groveContext }: OtherProfi
         </TouchableOpacity>
       </View>
     </View>
+    
+    {/* Grove Detail Modal */}
+    <Modal
+      visible={selectedGrove !== null}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setSelectedGrove(null)}
+    >
+      {selectedGrove && (
+        <GroveDetail
+          grove={selectedGrove}
+          onClose={() => setSelectedGrove(null)}
+        />
+      )}
+    </Modal>
+    </>
   );
 }
 

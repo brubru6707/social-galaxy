@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Dimensions,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,12 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import mockData from '../../assets/mock_data.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 import { useGrove } from '@/contexts/GroveContext';
-import GROVES from '@/assets/groves_data';
+import GROVES, { Grove } from '@/assets/groves_data';
+import GroveDetail from '../../components/grove-detail';
 
 export default function ExploreScreen() {
   const allEvents = mockData.events || [];
   const { userGroves, canAccessEvent, isGroveMember } = useGrove();
   const [selectedGroveFilter, setSelectedGroveFilter] = useState<string | null>(null);
+  const [selectedGrove, setSelectedGrove] = useState<Grove | null>(null);
   
   // Check which groves an event belongs to based on keywords
   const getEventGroves = (event: any) => {
@@ -42,6 +45,7 @@ export default function ExploreScreen() {
   }, [allEvents, selectedGroveFilter]);
 
   return (
+    <>
     <SafeAreaView style={styles.container}>
       <AnimatedLiquidGradient />
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -101,12 +105,14 @@ export default function ExploreScreen() {
           
           return (
             <View key={event.id} style={styles.eventCard}>
-              {/* Grove Badges */}
+              {/* Grove Badges - Clickable */}
               {eventGroves.length > 0 && (
                 <View style={styles.groveBadgesContainer}>
                   {eventGroves.slice(0, 2).map(grove => (
-                    <View 
-                      key={grove.id} 
+                    <TouchableOpacity 
+                      key={grove.id}
+                      onPress={() => setSelectedGrove(grove)}
+                      activeOpacity={0.7}
                       style={[
                         styles.groveBadge,
                         { backgroundColor: grove.color + '30', borderColor: grove.color }
@@ -118,7 +124,7 @@ export default function ExploreScreen() {
                           {grove.name.replace(' Grove', '')}
                         </Text>
                       )}
-                    </View>
+                    </TouchableOpacity>
                   ))}
                 </View>
               )}
@@ -165,6 +171,22 @@ export default function ExploreScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+    
+    {/* Grove Detail Modal */}
+    <Modal
+      visible={selectedGrove !== null}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setSelectedGrove(null)}
+    >
+      {selectedGrove && (
+        <GroveDetail
+          grove={selectedGrove}
+          onClose={() => setSelectedGrove(null)}
+        />
+      )}
+    </Modal>
+    </>
   );
 }
 

@@ -23,7 +23,6 @@ export interface GroveProfile {
   displayName?: string;
   bio?: string;
   profilePicture?: string;
-  visibleHotTakes: string[]; // Question IDs to show in this grove context
 }
 
 export interface UserGroveData {
@@ -247,13 +246,11 @@ export const MOCK_USER_GROVE_DATA: UserGroveData[] = [
         groveId: 'grove_tech',
         displayName: 'Bruno 💻',
         bio: 'Full-stack dev, hackathon enthusiast',
-        visibleHotTakes: ['ht_1', 'ht_5'], // Coffee, Frontend/Backend
       },
       {
         groveId: 'grove_gaming',
         displayName: 'BrunoGamer',
         bio: 'Minecraft veteran, down for any game night',
-        visibleHotTakes: ['ht_2'], // Minecraft vs Terraria
       },
     ],
     eventsByCategory: {

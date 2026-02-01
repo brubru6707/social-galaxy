@@ -3,12 +3,14 @@ import ProfileInfo from '@/components/Profile/ProfileInfo';
 import ShareProfileCard from '@/components/ShareProfileCard';
 import { useUser } from '@/contexts/UserContext';
 import { useGrove } from '@/contexts/GroveContext';
+import { Grove } from '@/assets/groves_data';
 import React, { useRef, useState } from 'react';
 import { Animated, Modal, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import stickersData from '../../assets/stickers.json';
 import AnimatedLiquidGradient from '../../components/AnimatedLiquidGradient';
 import { LinearGradient } from 'expo-linear-gradient';
+import GroveDetail from '../../components/grove-detail';
 
 export default function ProfileScreen() {
   const { currentUser } = useUser();
@@ -18,6 +20,7 @@ export default function ProfileScreen() {
   const rootCaptureRef = useRef<View>(null);
   const [emojiPositions, setEmojiPositions] = useState<{[key: number]: {x: number, y: number}}>({});
   const [showShareCard, setShowShareCard] = useState(false);
+  const [selectedGrove, setSelectedGrove] = useState<Grove | null>(null);
   const gestureStartPositions = useRef<{[key: number]: {x: number, y: number}}>({});
   const emojiAnimValues = useRef<{[key: number]: {translateX: Animated.Value, translateY: Animated.Value, scale: Animated.Value}}>({});
   
@@ -76,10 +79,7 @@ export default function ProfileScreen() {
     })) || [],
   };
   
-  // Filter hot takes if in grove context
-  const filteredHotTakes = activeGroveContext && groveProfile?.visibleHotTakes
-    ? userData.hotTakes.filter((take: any) => groveProfile.visibleHotTakes.includes(take.questionId))
-    : userData.hotTakes;
+  // Hot takes are shown regardless of grove context
 
 
   // Derive user stickers from hot take answers
@@ -175,21 +175,23 @@ export default function ProfileScreen() {
         {/* Profile Info Section (modularized) */}
         <ProfileInfo userData={userData} onShare={handleShare} onEdit={handleEdit} />
         
-        {/* Grove Badges */}
+        {/* Grove Badges - Clickable */}
         {userGroves.length > 0 && !activeGroveContext && (
           <View style={styles.groveBadgesSection}>
             <Text style={styles.groveBadgesSectionTitle}>My Groves</Text>
             <View style={styles.groveBadgesRow}>
               {userGroves.map(grove => (
-                <View 
-                  key={grove.id} 
+                <TouchableOpacity 
+                  key={grove.id}
+                  onPress={() => setSelectedGrove(grove)}
+                  activeOpacity={0.7}
                   style={[styles.groveBadge, { backgroundColor: grove.color + '30' }]}
                 >
                   <Text style={styles.groveBadgeEmoji}>{grove.emoji}</Text>
                   <Text style={[styles.groveBadgeText, { color: grove.color }]}>
                     {grove.name}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
@@ -197,20 +199,8 @@ export default function ProfileScreen() {
 
         {/* Hot Take Questions */}
         <View style={styles.hotTakesContainer}>
-          <Text style={styles.hotTakesTitle}>
-            {activeGroveContext ? `Hot Takes (${activeGrove?.name})` : 'Hot Takes'}
-          </Text>
-          {activeGroveContext && filteredHotTakes.length === 0 && (
-            <View style={styles.noHotTakesState}>
-              <Text style={styles.noHotTakesText}>
-                No hot takes selected for this grove
-              </Text>
-              <Text style={styles.noHotTakesSubtext}>
-                Edit your grove profile to choose which hot takes to show
-              </Text>
-            </View>
-          )}
-          {filteredHotTakes.map((take: any, index: number) => {
+          <Text style={styles.hotTakesTitle}>Hot Takes</Text>
+          {userData.hotTakes.map((take: any, index: number) => {
             const emojiAnim = getEmojiAnim(index);
             return (
               <View key={index} style={styles.hotTakeItem}>
@@ -244,6 +234,21 @@ export default function ProfileScreen() {
           stickers={userStickers}
           onClose={() => setShowShareCard(false)}
         />
+      </Modal>
+      
+      {/* Grove Detail Modal */}
+      <Modal
+        visible={selectedGrove !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSelectedGrove(null)}
+      >
+        {selectedGrove && (
+          <GroveDetail
+            grove={selectedGrove}
+            onClose={() => setSelectedGrove(null)}
+          />
+        )}
       </Modal>
     </SafeAreaView>
   );
@@ -351,23 +356,6 @@ const styles = StyleSheet.create({
   groveBadgeText: {
     fontSize: 13,
     fontWeight: '500',
-  },
-  noHotTakesState: {
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  noHotTakesText: {
-    color: '#9CA3AF',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  noHotTakesSubtext: {
-    color: '#6B7280',
-    fontSize: 12,
-    textAlign: 'center',
   },
   profileContainer: {
     position: 'relative',

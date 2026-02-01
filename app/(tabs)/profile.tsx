@@ -20,7 +20,7 @@ export default function ProfileScreen() {
 
   // Debug: log when emojiPositions changes
   React.useEffect(() => {
-    //console.log('[DEBUG] emojiPositions changed:', emojiPositions);
+    console.log('[DEBUG] emojiPositions changed:', emojiPositions);
     // Sync Animated values with state
     Object.keys(emojiPositions).forEach(indexStr => {
       const index = parseInt(indexStr);
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   // Get or create animated values for emoji at index
   const getEmojiAnim = (index: number) => {
     if (!emojiAnimValues.current[index]) {
-      // console.log(`[DEBUG] Creating new anim values for emoji ${index}`);
+      console.log(`[DEBUG] Creating new anim values for emoji ${index}`);
       emojiAnimValues.current[index] = {
         translateX: new Animated.Value(0),
         translateY: new Animated.Value(0),
@@ -53,20 +53,13 @@ export default function ProfileScreen() {
     return emojiAnimValues.current[index];
   };
 
-  // Function to format the joined date
-  const formatJoinedDate = (dateString: string) => {
-    if (!dateString || dateString === 'Unknown') return 'Unknown';
-    const date = new Date(dateString);
-    return `${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
-  };
-
   // Map currentUser data to the expected format
   const userData = {
     id: currentUser?.id || 'Unknown',
     firstName: currentUser?.name || 'User',
     lastName: '',
     profile_picture: currentUser?.profile_picture || "https://i.pravatar.cc/300?u='USER'",
-    dateJoined: formatJoinedDate(currentUser?.joined) || 'Unknown',
+    dateJoined: currentUser?.dob || 'Unknown',
     mutuals: currentUser?.mutuals?.length || 0,
     bio: currentUser?.bio || 'No bio available',
     hotTakes: currentUser?.hot_take_answers?.map((take: any) => ({

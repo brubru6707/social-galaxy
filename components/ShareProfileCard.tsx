@@ -169,15 +169,12 @@ export default function ShareProfileCard({
             activeOpacity={1}
             onPress={() => setShowDeleteFor(null)}
           />
-          
-          {/* Draggable and scalable stickers */}
+
+          {/* Stickers above profile */}
           <View style={styles.stickersContainer} pointerEvents="box-none">
             {stickers.map((emoji, index) => {
-              // Skip deleted stickers
               if (deletedStickers.has(index)) return null;
-              
               const anim = getStickerAnim(index);
-              
               return (
                 <LongPressGestureHandler
                   key={index}
@@ -225,15 +222,13 @@ export default function ShareProfileCard({
                               { translateY: anim.translateY },
                               { scale: anim.scale },
                             ],
-                            zIndex: showDeleteFor === index ? 10000 : 9999,
+                            zIndex: showDeleteFor === index ? 200 : 150,
                           },
                         ]}
                       >
                         <EmojiShimmer emoji={emoji} size={STICKER_SIZE} />
-                        {/* Control buttons on long press */}
                         {showDeleteFor === index && (
                           <View style={styles.stickerControls}>
-                            {/* Scale down button */}
                             <TouchableOpacity
                               style={styles.scaleButton}
                               onPress={() => handleScaleSticker(index, 'down')}
@@ -241,7 +236,6 @@ export default function ShareProfileCard({
                             >
                               <Text style={styles.scaleButtonText}>−</Text>
                             </TouchableOpacity>
-                            {/* Delete button */}
                             <TouchableOpacity
                               style={styles.deleteButton}
                               onPress={() => handleDeleteSticker(index)}
@@ -249,7 +243,6 @@ export default function ShareProfileCard({
                             >
                               <Text style={styles.deleteButtonText}>✕</Text>
                             </TouchableOpacity>
-                            {/* Scale up button */}
                             <TouchableOpacity
                               style={styles.scaleButton}
                               onPress={() => handleScaleSticker(index, 'up')}
@@ -344,6 +337,7 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 100,
   },
   stickerWrapper: {
     position: 'absolute',
@@ -392,6 +386,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+    zIndex: 1,
   },
   profileImage: {
     width: 100,

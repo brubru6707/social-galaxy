@@ -16,7 +16,7 @@ type ShareProfileCardProps = {
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 350;
 const STICKER_SIZE = 40;
-const PROFILE_ICON_RADIUS = 70; // Profile icon (100px) + padding to avoid overlap
+const PROFILE_ICON_RADIUS = 70;
 
 // Background color options
 const BACKGROUND_COLORS = [
@@ -29,7 +29,6 @@ const BACKGROUND_COLORS = [
   '#000000',
 ];
 
-// Helper to determine if a color is light (for text contrast)
 const isLightColor = (hex: string) => {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -47,7 +46,7 @@ export default function ShareProfileCard({
   const cardRef = useRef<View>(null);
   const [selectedBgColor, setSelectedBgColor] = useState(BACKGROUND_COLORS[0]);
 
-  // Generate initial random positions for stickers
+  // Generate initial random positions
   const initialPositions = useMemo(() => {
     const positions: { x: number; y: number }[] = [];
     const padding = 20;
@@ -90,42 +89,37 @@ export default function ShareProfileCard({
     return positions;
   }, [stickers.length]);
 
-  // Track current sticker positions (can be updated by dragging)
-  const [stickerPositions, setStickerPositions] = useState<{ [key: number]: { x: number; y: number } }>({});
-  
-  // Track deleted stickers
   const [deletedStickers, setDeletedStickers] = useState<Set<number>>(new Set());
-  
-  // Track which sticker is showing delete button
   const [showDeleteFor, setShowDeleteFor] = useState<number | null>(null);
   
-  // Animated values for each sticker
-  const stickerAnimValues = useRef<{ [key: number]: { translateX: Animated.Value; translateY: Animated.Value; scale: Animated.Value } }>({});
-  const gestureStartPositions = useRef<{ [key: number]: { x: number; y: number } }>({});
-  const gestureStartScales = useRef<{ [key: number]: number }>({});
+  // Z-Index Management
+  const [stickerZIndices, setStickerZIndices] = useState<{ [key: number]: number }>({});
+  const maxZIndexRef = useRef<number>(150);
   
+  // Animated Values Refs
+  const stickerAnimValues = useRef<{ [key: number]: { translateX: Animated.Value; translateY: Animated.Value; scale: Animated.Value } }>({});
+  const gestureStartScales = useRef<{ [key: number]: number }>({});
+  const gestureActive = useRef<{ [key: number]: boolean }>({});
 
-  // Handle sticker deletion
   const handleDeleteSticker = (index: number) => {
     setDeletedStickers((prev) => new Set([...prev, index]));
     setShowDeleteFor(null);
   };
 
-  // Handle sticker scaling
   const handleScaleSticker = (index: number, direction: 'up' | 'down') => {
     const anim = getStickerAnim(index);
     const currentScale = gestureStartScales.current[index] || 1;
     const scaleStep = 0.3;
     let newScale = direction === 'up' ? currentScale + scaleStep : currentScale - scaleStep;
-    newScale = Math.max(0.5, Math.min(2.5, newScale)); // Clamp between 0.5 and 2.5
+    newScale = Math.max(0.5, Math.min(2.5, newScale));
     gestureStartScales.current[index] = newScale;
+    
     Animated.spring(anim.scale, {
       toValue: newScale,
       useNativeDriver: false,
     }).start();
   };
 
-  // Get or create animated values for a sticker
   const getStickerAnim = (index: number) => {
     if (!stickerAnimValues.current[index]) {
       const initialPos = initialPositions[index] || { x: 0, y: 0 };
@@ -135,8 +129,18 @@ export default function ShareProfileCard({
         scale: new Animated.Value(1),
       };
       gestureStartScales.current[index] = 1;
+      
+      // Initialize Z-Index
+      if (!(index in stickerZIndices)) {
+        setStickerZIndices(prev => ({ ...prev, [index]: 150 + index }));
+      }
     }
     return stickerAnimValues.current[index];
+  };
+  
+  const bringToFront = (index: number) => {
+    maxZIndexRef.current += 1;
+    setStickerZIndices(prev => ({ ...prev, [index]: maxZIndexRef.current }));
   };
 
   const handleShare = async () => {
@@ -163,18 +167,19 @@ export default function ShareProfileCard({
       <View style={styles.container}>
         {/* Capturable Card */}
         <View ref={cardRef} style={[styles.card, { backgroundColor: selectedBgColor }]} collapsable={false}>
-          {/* Dismiss delete button on tap anywhere */}
+          
           <TouchableOpacity 
             style={styles.cardTouchable} 
             activeOpacity={1}
             onPress={() => setShowDeleteFor(null)}
           />
 
-          {/* Stickers above profile */}
+          {/* Stickers Container */}
           <View style={styles.stickersContainer} pointerEvents="box-none">
             {stickers.map((emoji, index) => {
               if (deletedStickers.has(index)) return null;
               const anim = getStickerAnim(index);
+              
               return (
                 <LongPressGestureHandler
                   key={index}
@@ -182,50 +187,74 @@ export default function ShareProfileCard({
                   onHandlerStateChange={(event) => {
                     if (event.nativeEvent.state === State.ACTIVE) {
                       setShowDeleteFor(index);
+                      bringToFront(index);
                     }
                   }}
                 >
-                  <Animated.View>
+                  {/* CRITICAL CHANGE: 
+                      We wrap the PanGestureHandler in the Animated.View that has the Z-INDEX and TRANSFORM.
+                      This ensures the stacking context is applied to the draggable unit.
+                  */}
+                  <Animated.View
+                    style={[
+                      styles.stickerWrapper,
+                      {
+                        transform: [
+                          { translateX: anim.translateX },
+                          { translateY: anim.translateY },
+                          { scale: anim.scale },
+                        ],
+                        // Z-Index is applied here to the outer wrapper
+                        zIndex: stickerZIndices[index] || 150 + index,
+                        elevation: stickerZIndices[index] || 150 + index,
+                      },
+                    ]}
+                  >
                     <PanGestureHandler
                       onGestureEvent={Animated.event(
-                        [],
-                        {
-                          useNativeDriver: false,
-                          listener: (event: any) => {
-                            const startPos = gestureStartPositions.current[index] || initialPositions[index] || { x: 0, y: 0 };
-                            const newX = startPos.x + event.nativeEvent.translationX;
-                            const newY = startPos.y + event.nativeEvent.translationY;
-                            anim.translateX.setValue(newX);
-                            anim.translateY.setValue(newY);
-                            setStickerPositions((prev) => ({
-                              ...prev,
-                              [index]: { x: newX, y: newY },
-                            }));
+                        [
+                          {
+                            nativeEvent: {
+                              translationX: anim.translateX,
+                              translationY: anim.translateY,
+                            },
                           },
-                        }
+                        ],
+                        { useNativeDriver: false }
                       )}
                       onHandlerStateChange={(event) => {
+                        console.log(`[Sticker ${index}] State:`, event.nativeEvent.state);
+                        console.log(`[Sticker ${index}] Translation:`, event.nativeEvent.translationX, event.nativeEvent.translationY);
+                        console.log(`[Sticker ${index}] Current anim values:`, (anim.translateX as any)._value, (anim.translateY as any)._value);
+                        console.log(`[Sticker ${index}] Current offset:`, (anim.translateX as any)._offset, (anim.translateY as any)._offset);
+                        
                         if (event.nativeEvent.state === State.BEGAN) {
-                          gestureStartPositions.current[index] = {
-                            x: (anim.translateX as any)._value,
-                            y: (anim.translateY as any)._value,
-                          };
+                          console.log(`[Sticker ${index}] BEGAN - gesture active?`, gestureActive.current[index]);
+                          // Only process BEGAN once per gesture
+                          if (!gestureActive.current[index]) {
+                            console.log(`[Sticker ${index}] BEGAN - setting offset and resetting value`);
+                            gestureActive.current[index] = true;
+                            bringToFront(index);
+                            // Extract current position to offset
+                            anim.translateX.setOffset((anim.translateX as any)._value);
+                            anim.translateY.setOffset((anim.translateY as any)._value);
+                            // Reset value to 0 so gesture starts from 0
+                            anim.translateX.setValue(0);
+                            anim.translateY.setValue(0);
+                          }
+                        }
+                        if (event.nativeEvent.state === State.END || event.nativeEvent.state === State.CANCELLED) {
+                          console.log(`[Sticker ${index}] END/CANCELLED - flattening offset`);
+                          gestureActive.current[index] = false;
+                          // Merge offset + value into value
+                          anim.translateX.flattenOffset();
+                          anim.translateY.flattenOffset();
+                          console.log(`[Sticker ${index}] After flatten - values:`, (anim.translateX as any)._value, (anim.translateY as any)._value);
                         }
                       }}
                     >
-                      <Animated.View
-                        style={[
-                          styles.stickerWrapper,
-                          {
-                            transform: [
-                              { translateX: anim.translateX },
-                              { translateY: anim.translateY },
-                              { scale: anim.scale },
-                            ],
-                            zIndex: showDeleteFor === index ? 200 : 150,
-                          },
-                        ]}
-                      >
+                      {/* The Inner View just holds the content, no positioning logic */}
+                      <View>
                         <EmojiShimmer emoji={emoji} size={STICKER_SIZE} />
                         {showDeleteFor === index && (
                           <View style={styles.stickerControls}>
@@ -252,7 +281,7 @@ export default function ShareProfileCard({
                             </TouchableOpacity>
                           </View>
                         )}
-                      </Animated.View>
+                      </View>
                     </PanGestureHandler>
                   </Animated.View>
                 </LongPressGestureHandler>
@@ -260,16 +289,13 @@ export default function ShareProfileCard({
             })}
           </View>
 
-          {/* Profile picture in center */}
           <View style={styles.profileContainer}>
             <Image source={{ uri: profilePicture }} style={styles.profileImage} />
           </View>
 
-          {/* Name below */}
           <Text style={[styles.name, { color: isLightColor(selectedBgColor) ? '#000' : '#fff' }]}>{name}</Text>
         </View>
 
-        {/* Color picker buttons */}
         <View style={styles.colorPickerContainer}>
           {BACKGROUND_COLORS.map((color) => (
             <TouchableOpacity
@@ -284,7 +310,6 @@ export default function ShareProfileCard({
           ))}
         </View>
 
-        {/* Action buttons (outside capture area) */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
             <Text style={styles.shareButtonText}>Share</Text>
@@ -340,7 +365,8 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   stickerWrapper: {
-    position: 'absolute',
+    position: 'absolute', 
+    // zIndex and transforms are applied dynamically inline
   },
   stickerControls: {
     position: 'absolute',

@@ -14,9 +14,11 @@ export default function ProfileScreen() {
   const profileCaptureRef = useRef<View>(null);
   const rootCaptureRef = useRef<View>(null);
   const [emojiPositions, setEmojiPositions] = useState<{[key: number]: {x: number, y: number}}>({});
+  const [emojiZIndexes, setEmojiZIndexes] = useState<{[key: number]: number}>({});
   const [showShareCard, setShowShareCard] = useState(false);
   const gestureStartPositions = useRef<{[key: number]: {x: number, y: number}}>({});
   const emojiAnimValues = useRef<{[key: number]: {translateX: Animated.Value, translateY: Animated.Value, scale: Animated.Value}}>({});
+  const maxZIndex = useRef(1000);
 
   // Debug: log when emojiPositions changes
   React.useEffect(() => {
@@ -51,6 +53,15 @@ export default function ProfileScreen() {
       };
     }
     return emojiAnimValues.current[index];
+  };
+
+  // Bring sticker to front when touched
+  const bringToFront = (index: number) => {
+    maxZIndex.current += 1;
+    setEmojiZIndexes(prev => ({
+      ...prev,
+      [index]: maxZIndex.current
+    }));
   };
 
   // Map currentUser data to the expected format
@@ -109,6 +120,8 @@ export default function ProfileScreen() {
                     getAnswerEmoji={() => getAnswerEmoji(take.answer)}
                     gestureStartPositions={gestureStartPositions}
                     setEmojiPositions={setEmojiPositions}
+                    zIndex={emojiZIndexes[index] || 1000 + index}
+                    onBringToFront={bringToFront}
                   />
                 </View>
               </View>

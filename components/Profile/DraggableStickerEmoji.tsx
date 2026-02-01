@@ -9,12 +9,16 @@ export default function DraggableStickerEmoji({
   getAnswerEmoji,
   gestureStartPositions,
   setEmojiPositions,
+  zIndex,
+  onBringToFront,
 }: {
   index: number;
   emojiAnim: any;
   getAnswerEmoji: (answer: string) => string;
   gestureStartPositions: React.MutableRefObject<{ [key: number]: { x: number; y: number } }>;
   setEmojiPositions: React.Dispatch<React.SetStateAction<{ [key: number]: { x: number; y: number } }>>;
+  zIndex: number;
+  onBringToFront: (index: number) => void;
 }) {
   return (
     <PanGestureHandler
@@ -42,6 +46,9 @@ export default function DraggableStickerEmoji({
       )}
       onHandlerStateChange={(event) => {
         if (event.nativeEvent.state === State.BEGAN) {
+          // Bring this sticker to the front
+          onBringToFront(index);
+          
           gestureStartPositions.current[index] = {
             x: emojiAnim.translateX._value,
             y: emojiAnim.translateY._value,
@@ -70,8 +77,8 @@ export default function DraggableStickerEmoji({
               { translateY: emojiAnim.translateY },
               { scale: emojiAnim.scale },
             ],
-            zIndex: 9999,
-            elevation: 9999,
+            zIndex: zIndex,
+            elevation: zIndex,
           },
         ]}
       >

@@ -11,9 +11,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Grove, GroveProfile } from '@/assets/groves_data';
+import { Grove, GroveProfile, GROVE_PROFILE_IMAGES } from '@/assets/groves_data';
 import { useUser } from '@/contexts/UserContext';
 import { useGrove } from '@/contexts/GroveContext';
+
+// Helper to get grove profile image source
+const getGroveProfileImage = (userId: string, groveId: string, fallbackUri: string) => {
+  const key = `${userId}_${groveId}` as keyof typeof GROVE_PROFILE_IMAGES;
+  if (GROVE_PROFILE_IMAGES[key]) {
+    return GROVE_PROFILE_IMAGES[key];
+  }
+  return { uri: fallbackUri };
+};
 
 interface GroveProfileEditorProps {
   grove: Grove;
@@ -101,11 +110,15 @@ export default function GroveProfileEditor({
           {/* Profile Picture Preview */}
           <View style={styles.profilePreview}>
             <Image
-              source={{ uri: currentUser?.profile_picture }}
+              source={getGroveProfileImage(
+                currentUser?.id || '',
+                grove.id,
+                currentUser?.profile_picture || ''
+              )}
               style={styles.profilePicture}
             />
             <Text style={styles.profilePreviewHint}>
-              Profile picture is shared across all groves
+              Your grove-specific profile picture
             </Text>
           </View>
           

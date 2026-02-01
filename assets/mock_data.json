@@ -2,10 +2,10 @@
   "users": [
     {
       "id": "u_0",
-      "name": "Bruno",
+      "name": "Jennifer",
       "bio": "Minecraft veteran",
       "dob": "2003-05-15",
-      "profile_picture": "https://robohash.org/Bruno.png",
+      "profile_picture": "https://robohash.org/Jennifer.png",
       "events_gone_to": [
         {
           "id": "evt_5",

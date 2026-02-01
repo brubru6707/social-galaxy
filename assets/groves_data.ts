@@ -91,8 +91,8 @@ export const GROVES: Grove[] = [
     category: 'fitness',
     keywords: ['fitness', 'gym', 'run', 'yoga', 'workout', 'sports', 'hike'],
     color: '#EF4444', // Red
-    memberCount: 76,
-    members: ['u_1', 'u_6', 'u_10', 'u_17', 'u_25', 'u_29', 'u_33'],
+    memberCount: 77,
+    members: ['u_0', 'u_1', 'u_6', 'u_10', 'u_17', 'u_25', 'u_29', 'u_33'],
     accessRules: {
       minEventsAttended: 2,
       autoJoin: true,
@@ -235,28 +235,50 @@ export function canAccessEvent(
   return { canAccess: true };
 }
 
+// Grove profile images for Jennifer
+// These are imported as static assets for React Native
+export const GROVE_PROFILE_IMAGES = {
+  'u_0_grove_study': require('./images/janiston-reading.jpg'),
+  'u_0_grove_fitness': require('./images/janiston-workout.jpeg'),
+  'u_0_grove_tech': require('./images/janiston-tech.webp'),
+};
+
 // Mock user grove data for demo
 export const MOCK_USER_GROVE_DATA: UserGroveData[] = [
   {
-    userId: 'u_0', // Bruno - the current user
-    groves: ['grove_tech', 'grove_gaming', 'grove_study'],
+    userId: 'u_0', // Jennifer - the current user
+    groves: ['grove_tech', 'grove_gaming', 'grove_study', 'grove_fitness'],
     pendingGroves: ['grove_nightowls'], // Close to unlocking
     groveProfiles: [
       {
         groveId: 'grove_tech',
-        displayName: 'Bruno 💻',
+        displayName: 'Jennifer 💻',
         bio: 'Full-stack dev, hackathon enthusiast',
+        profilePicture: 'grove_tech_jennifer',
       },
       {
         groveId: 'grove_gaming',
-        displayName: 'BrunoGamer',
+        displayName: 'JenniferGamer',
         bio: 'Minecraft veteran, down for any game night',
+      },
+      {
+        groveId: 'grove_study',
+        displayName: 'Jennifer 📚',
+        bio: 'Always down for focused study sessions and coffee',
+        profilePicture: 'grove_study_jennifer',
+      },
+      {
+        groveId: 'grove_fitness',
+        displayName: 'Jennifer 💪',
+        bio: 'Fitness enthusiast, gym and outdoor adventures',
+        profilePicture: 'grove_fitness_jennifer',
       },
     ],
     eventsByCategory: {
       grove_tech: 3,
       grove_gaming: 2,
       grove_study: 2,
+      grove_fitness: 2,
       grove_nightowls: 2, // Needs 3 for Night Owls
     },
   },

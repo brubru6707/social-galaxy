@@ -12,10 +12,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGrove } from '@/contexts/GroveContext';
 import { useUser } from '@/contexts/UserContext';
-import { Grove, GroveProfile } from '@/assets/groves_data';
+import { Grove, GroveProfile, GROVE_PROFILE_IMAGES } from '@/assets/groves_data';
 import mockData from '@/assets/mock_data.json';
 import GroveProfileEditor from './grove-profile-editor';
 import GroveSocialGalaxy from './grove-social-galaxy';
+
+// Helper to get grove profile image source
+const getGroveProfileImage = (userId: string, groveId: string, fallbackUri: string) => {
+  const key = `${userId}_${groveId}` as keyof typeof GROVE_PROFILE_IMAGES;
+  if (GROVE_PROFILE_IMAGES[key]) {
+    return GROVE_PROFILE_IMAGES[key];
+  }
+  return { uri: fallbackUri };
+};
 
 const { width } = Dimensions.get('window');
 
@@ -248,7 +257,11 @@ export default function GroveDetail({ grove, onClose }: GroveDetailProps) {
             
             <View style={styles.profileCard}>
               <Image 
-                source={{ uri: currentUser?.profile_picture }}
+                source={getGroveProfileImage(
+                  currentUser?.id || '', 
+                  grove.id, 
+                  currentUser?.profile_picture || ''
+                )}
                 style={styles.profileAvatar}
               />
               <View style={styles.profileInfo}>

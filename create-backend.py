@@ -8,7 +8,7 @@ NUM_EVENTS = 20
 NUM_HOT_TAKES = 80
 
 # --- RAW DATA POOLS ---
-NAMES = ["Bruno", "Lidia", "Marcus", "Sarah", "Jenna", "Tariq", "Chen", "Wei", "Sofia", "Mateo", "Priya", "Rahul", "Chloe", "Zoe", "Liam", "Noah", "Emma", "Olivia", "Ava", "Elijah", "William", "James", "Benjamin", "Lucas", "Henry", "Alexander", "Mason", "Michael", "Ethan", "Daniel", "Jacob", "Logan", "Jackson", "Levi", "Sebastian", "Jack", "Aiden", "Owen", "Samuel", "Matthew"]
+NAMES = ["Jennifer", "Lidia", "Marcus", "Sarah", "Jenna", "Tariq", "Chen", "Wei", "Sofia", "Mateo", "Priya", "Rahul", "Chloe", "Zoe", "Liam", "Noah", "Emma", "Olivia", "Ava", "Elijah", "William", "James", "Benjamin", "Lucas", "Henry", "Alexander", "Mason", "Michael", "Ethan", "Daniel", "Jacob", "Logan", "Jackson", "Levi", "Sebastian", "Jack", "Aiden", "Owen", "Samuel", "Matthew"]
 BIOS = ["Coffee addict ☕️", "CS Major @ Brown", "Gym rat 💪", "Startup founder 🚀", "Artist 🎨", "Just here for the vibes", "Minecraft veteran", "Python wiz", "Hardware hacker", "Foodie 🍔"]
 EVENT_TYPES = ["Party", "Hackathon", "Study Session", "Mixer", "Workshop"]
 HOT_TAKES_TOPICS = [
